@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Units - {{ staff_user.name }}{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .units-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+
+    .staff-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #eee;
+    }
+
+    .staff-info h1 {
+        margin: 0;
+        color: #333;
+    }
+
+    .staff-info p {
+        margin: 5px 0 0 0;
+        color: #666;
+    }
+
+    .role-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .units-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .unit-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .unit-card:hover {
+        border-color: #dee2e6;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .unit-card.selected {
+        border-color: #ee4d2d;
+        background-color: #fff5f5;
+    }
+
+    .unit-checkbox {
+        display: none;
+    }
+
+    .unit-info h3 {
+        margin: 0 0 8px 0;
+        color: #333;
+        font-size: 1.1rem;
+    }
+
+    .unit-details {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 8px;
+    }
+
+    .unit-status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .status-occupied {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .status-vacant {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-primary {
+        background-color: #ee4d2d;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary:hover {
+        background-color: #d44424;
+        text-decoration: none;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        text-decoration: none;
+    }
+
+    .selection-summary {
+        background-color: #e9ecef;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    .selection-summary h4 {
+        margin: 0 0 8px 0;
+        color: #495057;
+    }
+
+    .selected-count {
+        font-weight: bold;
+        color: #ee4d2d;
+    }
+
+    .select-all-controls {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.875rem;
+        border-radius: 4px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-outline {
+        background-color: transparent;
+        border: 1px solid #dee2e6;
+        color: #495057;
+    }
+
+    .btn-outline:hover {
+        background-color: #f8f9fa;
+    }
+
+    @media (max-width: 768px) {
+        .units-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="units-container">
+    <div class="staff-header">
+        <div class="staff-info">
+            <h1>Assign Units - {{ staff_user.name }}</h1>
+            <p>Email: {{ staff_user.email }} | Role: <span class="role-badge">{{ staff_user.role.name }}</span></p>
+        </div>
+    </div>
+
+    <form method="post" id="unitsForm">
+        <div class="selection-summary">
+            <h4>Unit Selection</h4>
+            <p>Select units that <strong>{{ staff_user.name }}</strong> should have access to. Staff members can only view and manage data for their assigned units.</p>
+            <p>Currently selected: <span class="selected-count" id="selectedCount">0</span> out of {{ units|length }} units</p>
+        </div>
+
+        <div class="select-all-controls">
+            <button type="button" class="btn-sm btn-outline" onclick="selectAllUnits()">Select All</button>
+            <button type="button" class="btn-sm btn-outline" onclick="deselectAllUnits()">Deselect All</button>
+        </div>
+
+        <div class="units-grid">
+            {% for unit in units %}
+            <div class="unit-card" onclick="toggleUnit({{ unit.id }})">
+                <input type="checkbox"
+                       id="unit_{{ unit.id }}"
+                       name="assigned_units"
+                       value="{{ unit.id }}"
+                       class="unit-checkbox"
+                       {% if unit in staff_user.assigned_staff_units %}checked{% endif %}>
+                <div class="unit-info">
+                    <h3>{{ unit.unit_number }}</h3>
+                    {% if unit.building %}
+                    <div class="unit-details">Building: {{ unit.building }}</div>
+                    {% endif %}
+                    {% if unit.address %}
+                    <div class="unit-details">{{ unit.address }}</div>
+                    {% endif %}
+                    <div class="unit-details">
+                        <span class="unit-status {{ 'status-occupied' if unit.is_occupied else 'status-vacant' }}">
+                            {{ 'Occupied' if unit.is_occupied else 'Vacant' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not units %}
+        <div style="text-align: center; padding: 40px; color: #666;">
+            <p>No units found in your company.</p>
+            <a href="{{ url_for('units.add_unit') }}" class="btn-primary">Add the first unit</a>
+        </div>
+        {% endif %}
+
+        <div class="action-buttons">
+            <div>
+                <a href="{{ url_for('user_management.manage_users') }}" class="btn-secondary">← Back to Users</a>
+            </div>
+
+            <div>
+                <button type="submit" class="btn-primary">Save Unit Assignments</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    updateSelectedCount();
+    updateCardStates();
+});
+
+function toggleUnit(unitId) {
+    const checkbox = document.getElementById('unit_' + unitId);
+    checkbox.checked = !checkbox.checked;
+    updateSelectedCount();
+    updateCardStates();
+}
+
+function selectAllUnits() {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelectedCount();
+    updateCardStates();
+}
+
+function deselectAllUnits() {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectedCount();
+    updateCardStates();
+}
+
+function updateSelectedCount() {
+    const checkedBoxes = document.querySelectorAll('.unit-checkbox:checked');
+    document.getElementById('selectedCount').textContent = checkedBoxes.length;
+}
+
+function updateCardStates() {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(checkbox => {
+        const card = checkbox.closest('.unit-card');
+        if (checkbox.checked) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+    });
+}
+
+// Prevent form submission when clicking on unit cards
+document.getElementById('unitsForm').addEventListener('click', function(e) {
+    if (e.target.classList.contains('unit-card') || e.target.closest('.unit-card')) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

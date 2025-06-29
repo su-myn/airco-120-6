@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <h1>Edit User - {{ user.name }}</h1>
+
+    <form method="post">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ user.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ user.email }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password (Leave blank to keep current)</label>
+            <input type="password" id="password" name="password">
+        </div>
+
+        <div class="form-group">
+            <label for="role_id">Role</label>
+            <select id="role_id" name="role_id" required>
+                {% for role in roles %}
+                {% if role.name in ['Manager', 'Staff', 'Cleaner'] or current_user.is_admin %}
+                {% set is_current_role = (role.id == user.role_id) %}
+                {% set can_assign = is_current_role or current_user.company.can_add_user_for_role(role.name) %}
+                <option value="{{ role.id }}"
+                    {{ 'selected' if is_current_role else '' }}
+                    {% if not can_assign %}disabled{% endif %}>
+                    {{ role.name }}
+                    {% if is_current_role %}
+                    (Current)
+                    {% elif not can_assign %}
+                    (Limit Reached: {{ current_user.company.get_user_count_by_role(role.name) }}/{{ current_user.company.get_max_users_for_role(role.name) }})
+                    {% else %}
+                    ({{ current_user.company.get_user_count_by_role(role.name) }}/{{ current_user.company.get_max_users_for_role(role.name) }})
+                    {% endif %}
+                </option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" style="display: flex; align-items: center;">
+            <input type="checkbox" id="is_cleaner" name="is_cleaner" style="width: auto; margin-right: 10px;" {{ 'checked' if user.is_cleaner else '' }}>
+            <label for="is_cleaner">Is Cleaner</label>
+        </div>
+
+        <button type="submit">Update User</button>
+    </form>
+
+    <div class="auth-links">
+        <p><a href="{{ url_for('user_management.manage_users') }}">← Back to Manage Users</a></p>
+    </div>
+</div>
+{% endblock %}

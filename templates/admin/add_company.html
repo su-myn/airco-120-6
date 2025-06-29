@@ -1,0 +1,56 @@
+<!-- Step 4: Update admin/add_company.html template -->
+{% extends "admin/layout.html" %}
+
+{% block title %}Add New Company{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <h2>Add New Company</h2>
+
+    <form method="post" class="admin-form">
+        <div class="form-group">
+            <label for="name">Company Name</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="max_units">Maximum Units Allowed</label>
+            <input type="number" id="max_units" name="max_units" min="15" max="1000" value="20" required>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Set the maximum number of units this company can create (15-1000)
+            </small>
+        </div>
+
+        <h3 style="margin-top: 30px; margin-bottom: 15px; color: #333;">User Limits by Role</h3>
+
+        <div class="form-group">
+            <label for="max_manager_users">Maximum Manager Users</label>
+            <input type="number" id="max_manager_users" name="max_manager_users" min="1" max="10" value="1" required>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Number of Manager users this company can have (minimum 1)
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="max_staff_users">Maximum Staff Users</label>
+            <input type="number" id="max_staff_users" name="max_staff_users" min="0" max="20" value="1" required>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Number of Staff users this company can have
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="max_cleaner_users">Maximum Cleaner Users</label>
+            <input type="number" id="max_cleaner_users" name="max_cleaner_users" min="0" max="50" value="2" required>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                Number of Cleaner users this company can have
+            </small>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="admin-btn">Add Company</button>
+            <a href="{{ url_for('admin.admin_companies') }}" class="admin-btn secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

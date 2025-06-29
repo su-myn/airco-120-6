@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+
+{% block title %}Add Booking{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .form-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        width: 95%;
+        margin: 0 auto;
+    }
+
+    .form-title {
+        margin-bottom: 15px;
+        color: #ee4d2d;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .form-group {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* Custom widths for specific fields */
+    .form-group.guest-name,
+    .form-group.contact-number {
+        flex: 0 0 20%; /* Make these fields take up less space */
+    }
+
+    .form-group.booking-source {
+        flex: 0 0 55%; /* Give booking source more space for the buttons */
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .form-group textarea {
+        height: 60px;
+        resize: vertical;
+    }
+
+    .required-field::after {
+        content: "*";
+        color: red;
+        margin-left: 2px;
+    }
+
+    .form-section-title {
+        margin: 15px 0 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
+        color: #ee4d2d;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    /* Source selection buttons */
+    .booking-source-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .source-option {
+        display: none;
+    }
+
+    .source-label {
+        display: inline-block;
+        padding: 5px 8px;
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .source-option:checked + .source-label {
+        background-color: #ee4d2d;
+        color: white;
+        border-color: #ee4d2d;
+    }
+
+    /* Date validation styles */
+    .date-error {
+        background-color: #ffeaea;
+        border-color: #ff6b6b;
+    }
+
+    .date-warning-message {
+        color: #dc3545;
+        font-size: 0.8rem;
+        margin-top: 5px;
+        display: none;
+    }
+
+    /* Flatpickr styling */
+    .flatpickr-calendar {
+        box-shadow: 0 3px 13px rgba(0,0,0,0.15);
+    }
+
+    .flatpickr-day.unavailable {
+        background-color: #ffcccc;
+        text-decoration: line-through;
+        color: #999;
+    }
+
+    .flatpickr-day.unavailable:hover {
+        background-color: #ffb3b3;
+    }
+
+    /* Guest info note */
+    .guest-info-note {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 5px;
+        margin-bottom: 15px;
+    }
+</style>
+<!-- Include Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="form-title">Record Booking</h2>
+
+    <form method="post" action="{{ url_for('bookings.add_booking') }}" id="booking-form">
+        <div class="form-row">
+
+
+            <div class="form-group booking-source">
+                <label for="booking_source" class="required-field">Booking Source</label>
+                <div class="booking-source-options">
+                    <input type="radio" id="source_whatsapp" name="booking_source" value="WhatsApp"
+                           class="source-option"
+                           {% if (form_data is defined and form_data.booking_source == 'WhatsApp') or
+                                 (form_data is not defined) %}checked{% endif %}>
+                    <label for="source_whatsapp" class="source-label">WhatsApp</label>
+
+                    <input type="radio" id="source_call" name="booking_source" value="Phone Call"
+                           class="source-option"
+                           {% if form_data is defined and form_data.booking_source == 'Phone Call' %}checked{% endif %}>
+                    <label for="source_call" class="source-label">Phone Call</label>
+
+                    <input type="radio" id="source_walkin" name="booking_source" value="Direct Walk-In"
+                           class="source-option"
+                           {% if form_data is defined and form_data.booking_source == 'Direct Walk-In' %}checked{% endif %}>
+                    <label for="source_walkin" class="source-label">Walk-In</label>
+
+                    <input type="radio" id="source_airbnb" name="booking_source" value="Airbnb"
+                           class="source-option"
+                           {% if form_data is defined and form_data.booking_source == 'Airbnb' %}checked{% endif %}>
+                    <label for="source_airbnb" class="source-label">Airbnb</label>
+
+                    <input type="radio" id="source_agoda" name="booking_source" value="Agoda"
+                           class="source-option"
+                           {% if form_data is defined and form_data.booking_source == 'Agoda' %}checked{% endif %}>
+                    <label for="source_agoda" class="source-label">Agoda</label>
+
+                    <input type="radio" id="source_booking" name="booking_source" value="Booking.com"
+                           class="source-option"
+                           {% if form_data is defined and form_data.booking_source == 'Booking.com' %}checked{% endif %}>
+                    <label for="source_booking" class="source-label">Booking.com</label>
+
+                    <input type="radio" id="source_other" name="booking_source" value="Other"
+                           class="source-option"
+                           {% if form_data is defined and form_data.booking_source == 'Other' %}checked{% endif %}>
+                    <label for="source_other" class="source-label">Other</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="unit_id" class="required-field">Unit Number</label>
+                <select id="unit_id" name="unit_id" required>
+                    <option value="">Select a unit</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.id }}"
+                            {% if form_data is defined and form_data.unit_id|int == unit.id %}selected{% endif %}>
+                        {{ unit.unit_number }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="check_in_date" class="required-field">Check-in Date</label>
+                <input type="text" id="check_in_date" name="check_in_date" required
+                       value="{{ form_data.check_in_date if form_data is defined else '' }}">
+                <div class="date-warning-message" id="check-in-warning"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="check_out_date" class="required-field">Check-out Date</label>
+                <input type="text" id="check_out_date" name="check_out_date" required
+                       value="{{ form_data.check_out_date if form_data is defined else '' }}">
+                <div class="date-warning-message" id="check-out-warning"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="price" class="required-field">Price</label>
+                <input type="number" id="price" name="price" step="0.01" min="0" pattern="^\d+(\.\d{1,2})?$" required
+                       value="{{ form_data.price if form_data is defined else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="number_of_nights">Number of Nights</label>
+                <input type="number" id="number_of_nights" name="number_of_nights" readonly disabled
+                       value="{{ form_data.number_of_nights if form_data is defined else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="property_name">Property</label>
+                <input type="text" id="property_name" name="property_name"
+                       value="{{ form_data.property_name if form_data is defined else '' }}">
+            </div>
+
+        </div>
+
+        <div class="form-row">
+
+
+
+        </div>
+
+        <!-- Guests Section -->
+        <div class="form-section-title">Guests</div>
+        <div class="form-row">
+            <div class="form-group guest-name">
+                <label for="guest_name">Guest Name</label>
+                <input type="text" id="guest_name" name="guest_name" value="{{ form_data.guest_name if form_data is defined else '' }}">
+            </div>
+
+            <div class="form-group contact-number">
+                <label for="contact_number">Contact Number</label>
+                <input type="text" id="contact_number" name="contact_number" value="{{ form_data.contact_number if form_data is defined else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="adults">Adults</label>
+                <input type="number" id="adults" name="adults" min="0"
+                       value="{{ form_data.adults if form_data is defined else '2' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="children">Children</label>
+                <input type="number" id="children" name="children" min="0"
+                       value="{{ form_data.children if form_data is defined else '0' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="infants">Infants</label>
+                <input type="number" id="infants" name="infants" min="0"
+                       value="{{ form_data.infants if form_data is defined else '0' }}">
+            </div>
+
+            <!-- Hidden field to store total guests -->
+            <input type="hidden" id="number_of_guests" name="number_of_guests" value="{{ form_data.number_of_guests if form_data is defined else '2' }}">
+        </div>
+
+        <!-- Additional Information Section -->
+        <div class="form-section-title">Additional Information</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="confirmation_code">Confirmation Code</label>
+                <input type="text" id="confirmation_code" name="confirmation_code"
+                       placeholder="Enter booking confirmation code"
+                       value="{{ form_data.confirmation_code if form_data is defined else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="booking_date">Booking Date</label>
+                <input type="text" id="booking_date" name="booking_date"
+                       value="{{ form_data.booking_date if form_data is defined else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="payment_status">Payment Status</label>
+                <select id="payment_status" name="payment_status">
+                    <option value="Pending" {% if form_data is defined and form_data.payment_status == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Paid" {% if form_data is defined and (form_data.payment_status == 'Paid' or form_data.payment_status == 'Fully Paid') %}selected{% else %}selected{% endif %}>Paid</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes (Optional)</label>
+            <input type="text" id="notes" name="notes"
+                   placeholder="Any special requests or information..."
+                   value="{{ form_data.notes if form_data is defined else '' }}">
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('bookings.bookings') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Booking</button>
+        </div>
+    </form>
+</div>
+
+<!-- Include Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+    // Initialize date pickers and availability checking
+    document.addEventListener('DOMContentLoaded', function() {
+        // Variables to store unavailable dates for the selected unit
+        let unavailableDateRanges = [];
+        let selectedUnitId = document.getElementById('unit_id').value;
+
+        // Flatpickr instances
+        let checkInPicker = null;
+        let checkOutPicker = null;
+        let bookingDatePicker = null;
+
+        // Initialize datepickers
+        initializeDatepickers();
+
+        // Fetch unavailable dates for the initial unit selection
+        if (selectedUnitId) {
+            fetchUnavailableDates(selectedUnitId);
+        }
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Function to initialize datepickers
+        function initializeDatepickers() {
+            // Common configuration
+            const today = new Date();
+            const nextDay = new Date(today);
+            nextDay.setDate(today.getDate() + 1);
+
+            // Booking date picker (simple date picker)
+            bookingDatePicker = flatpickr("#booking_date", {
+                dateFormat: "Y-m-d",
+                defaultDate: today,
+                altInput: true,
+                altFormat: "F j, Y",
+            });
+
+            // Check-in date picker with disabled dates
+            checkInPicker = flatpickr("#check_in_date", {
+                dateFormat: "Y-m-d",
+                defaultDate: today,
+                minDate: "today",
+                altInput: true,
+                altFormat: "F j, Y",
+                disable: [],
+                onChange: function(selectedDates, dateStr) {
+                    updateCheckOutMinDate(selectedDates[0]);
+                    calculateNights();
+                    validateDateRange();
+                }
+            });
+
+            // Check-out date picker with disabled dates
+            checkOutPicker = flatpickr("#check_out_date", {
+                dateFormat: "Y-m-d",
+                defaultDate: nextDay,
+                minDate: nextDay,
+                altInput: true,
+                altFormat: "F j, Y",
+                disable: [],
+                onChange: function() {
+                    calculateNights();
+                    validateDateRange();
+                }
+            });
+        }
+
+        // Function to update the check-out minimum date
+        function updateCheckOutMinDate(checkInDate) {
+            if (!checkInDate) return;
+
+            const nextDay = new Date(checkInDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+
+            // Update min date
+            checkOutPicker.set('minDate', nextDay);
+
+            // If the current check-out date is before the new minimum, update it
+            const currentCheckOutDate = checkOutPicker.selectedDates[0];
+            if (currentCheckOutDate < nextDay) {
+                checkOutPicker.setDate(nextDay);
+            }
+        }
+
+        // Function to calculate number of nights
+        function calculateNights() {
+            const checkIn = checkInPicker.selectedDates[0];
+            const checkOut = checkOutPicker.selectedDates[0];
+
+            if (checkIn && checkOut) {
+                const timeDiff = checkOut.getTime() - checkIn.getTime();
+                const nights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+                if (nights > 0) {
+                    document.getElementById('number_of_nights').value = nights;
+                } else {
+                    document.getElementById('number_of_nights').value = '';
+                    document.getElementById('check-out-warning').textContent = 'Check-out date must be after check-in date';
+                    document.getElementById('check-out-warning').style.display = 'block';
+                    document.getElementById('check_out_date').classList.add('date-error');
+                }
+            }
+        }
+
+
+        // Function to validate the selected date range
+        // Function to validate the selected date range
+        function validateDateRange() {
+            const checkIn = checkInPicker.selectedDates[0];
+            const checkOut = checkOutPicker.selectedDates[0];
+            const feedbackElement = document.getElementById('check-in-warning');
+            const submitButton = document.querySelector('button[type="submit"]');
+
+            // Reset error states
+            document.getElementById('check_in_date').classList.remove('date-error');
+            document.getElementById('check_out_date').classList.remove('date-error');
+            feedbackElement.style.display = 'none';
+            submitButton.disabled = false;
+
+            if (!checkIn || !checkOut || !selectedUnitId) {
+                return;
+            }
+
+            // Check if the date range overlaps with any unavailable date range
+            let isAvailable = true;
+            let conflictMessage = '';
+
+            for (const range of unavailableDateRanges) {
+                const rangeStart = new Date(range.start);
+                const rangeEnd = new Date(range.end);
+
+                // Check for TRUE overlap (not just touching dates)
+                // True overlap means the periods actually interfere with each other
+                const hasOverlap = checkIn < rangeEnd && checkOut > rangeStart;
+
+                // Same-day turnover scenarios that should be ALLOWED:
+                // 1. Our check-in equals their check-out (we check in when they check out)
+                // 2. Our check-out equals their check-in (we check out when they check in)
+                const isCheckInOnTheirCheckOut = isSameDay(checkIn, rangeEnd);
+                const isCheckOutOnTheirCheckIn = isSameDay(checkOut, rangeStart);
+                const isSameDayTurnover = isCheckInOnTheirCheckOut || isCheckOutOnTheirCheckIn;
+
+                // Only flag as conflict if there's overlap AND it's not same-day turnover
+                if (hasOverlap && !isSameDayTurnover) {
+                    isAvailable = false;
+                    conflictMessage = `Unit is not available for these dates. Conflicts with booking for ${range.guestName} (${formatDate(rangeStart)} to ${formatDate(rangeEnd)})`;
+                    break;
+                }
+            }
+
+            // Update UI based on availability
+            if (!isAvailable) {
+                feedbackElement.textContent = conflictMessage;
+                feedbackElement.style.display = 'block';
+
+                // Add error styling
+                document.getElementById('check_in_date').classList.add('date-error');
+                document.getElementById('check_out_date').classList.add('date-error');
+
+                // Disable submit button to prevent saving conflicting dates
+                submitButton.disabled = true;
+            }
+        }
+
+        // Helper function to check if two dates represent the same day
+        function isSameDay(date1, date2) {
+            if (!date1 || !date2) return false;
+            return date1.getFullYear() === date2.getFullYear() &&
+                   date1.getMonth() === date2.getMonth() &&
+                   date1.getDate() === date2.getDate();
+        }
+
+        // Helper function to format date for display
+        function formatDate(date) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return date.toLocaleDateString(undefined, options);
+        }
+
+        // Function to fetch unavailable dates for a unit
+        function fetchUnavailableDates(unitId) {
+            if (!unitId) return;
+
+            // Show loading indicator if you have one
+
+            // Clear previous unavailable dates
+            unavailableDateRanges = [];
+
+            // Make API request to get bookings for this unit
+            fetch(`/api/unit_bookings/${unitId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Process booking data
+                    if (data.bookings && data.bookings.length > 0) {
+                        // Extract unavailable date ranges from bookings
+                        unavailableDateRanges = data.bookings.map(booking => ({
+                            bookingId: booking.id,
+                            guestName: booking.guest_name,
+                            start: new Date(booking.check_in_date),
+                            end: new Date(booking.check_out_date)
+                        }));
+
+                        // Update datepickers with unavailable dates
+                        updateDatepickerDisabledDates();
+                    }
+
+                    // Hide loading indicator if you have one
+
+                    // Validate current selection
+                    validateDateRange();
+                })
+                .catch(error => {
+                    console.error('Error fetching unit bookings:', error);
+                    // Hide loading indicator if you have one
+                });
+        }
+
+        // Function to update the disabled dates in datepickers
+        // Function to update the disabled dates in datepickers
+        function updateDatepickerDisabledDates() {
+            // For check-in picker: disable dates where someone is already staying
+            const checkInDisabledDates = [];
+
+            // For check-out picker: be more permissive to allow same-day turnover
+            const checkOutDisabledDates = [];
+
+            unavailableDateRanges.forEach(range => {
+                const start = new Date(range.start);
+                const end = new Date(range.end);
+
+                // For CHECK-IN picker: disable all dates in the range EXCEPT the checkout date
+                // This prevents checking in when someone is staying, but allows checking in on checkout day
+                for (let date = new Date(start); date < end; date.setDate(date.getDate() + 1)) {
+                    checkInDisabledDates.push(new Date(date));
+                }
+
+                // For CHECK-OUT picker: only disable dates in the MIDDLE of stays
+                // Allow checkout on any date that's a checkin date for someone else
+                const dayAfterStart = new Date(start);
+                dayAfterStart.setDate(dayAfterStart.getDate() + 1);
+
+                for (let date = new Date(dayAfterStart); date < end; date.setDate(date.getDate() + 1)) {
+                    checkOutDisabledDates.push(new Date(date));
+                }
+                // Note: We don't disable the start date or end date for checkout
+            });
+
+            // Update the disabled dates with different rules for each picker
+            checkInPicker.set('disable', checkInDisabledDates);
+            checkOutPicker.set('disable', checkOutDisabledDates);
+
+            // Add custom class to disabled dates for better visualization
+            setTimeout(() => {
+                const disabledDays = document.querySelectorAll('.flatpickr-day.disabled');
+                disabledDays.forEach(day => {
+                    day.classList.add('unavailable');
+                });
+            }, 100);
+        }
+
+        // Function to setup event listeners
+        function setupEventListeners() {
+            // Listen for unit selection changes
+            const unitSelect = document.getElementById('unit_id');
+            unitSelect.addEventListener('change', function() {
+                selectedUnitId = this.value;
+                if (selectedUnitId) {
+                    fetchUnavailableDates(selectedUnitId);
+                } else {
+                    // Clear unavailable dates if no unit is selected
+                    unavailableDateRanges = [];
+                    updateDatepickerDisabledDates();
+                }
+            });
+
+            // Calculate total guests automatically
+            const adultsInput = document.getElementById('adults');
+            const childrenInput = document.getElementById('children');
+            const infantsInput = document.getElementById('infants');
+            const totalGuestsInput = document.getElementById('number_of_guests');
+
+            function updateTotalGuests() {
+                const adults = parseInt(adultsInput.value) || 0;
+                const children = parseInt(childrenInput.value) || 0;
+                const infants = parseInt(infantsInput.value) || 0;
+                totalGuestsInput.value = adults + children + infants;
+            }
+
+            adultsInput.addEventListener('input', updateTotalGuests);
+            childrenInput.addEventListener('input', updateTotalGuests);
+            infantsInput.addEventListener('input', updateTotalGuests);
+
+            // Initial calculation
+            updateTotalGuests();
+
+            // Add form submission handler to ensure total guests is updated
+            document.getElementById('booking-form').addEventListener('submit', function() {
+                updateTotalGuests();
+            });
+        }
+    });
+</script>
+{% endblock %}

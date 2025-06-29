@@ -1,0 +1,986 @@
+{% extends "base.html" %}
+
+{% block title %}Booking Calendar - PropertyHub{% endblock %}
+
+{% block additional_styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css">
+<style>
+    .calendar-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .calendar-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .calendar-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-group label {
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    .filter-group select {
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        min-width: 180px;
+    }
+
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        align-self: flex-end;
+        margin-top: 23px;
+    }
+
+    .filter-btn {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .apply-btn {
+        background-color: #ee4d2d;
+        color: white;
+    }
+
+    .reset-btn {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    #calendar {
+        height: 700px;
+        width: 100%;
+    }
+
+    /* Calendar Event Styling */
+    /* Calendar Event Styling */
+    .booking-event {
+        border: none !important;
+        padding: 2px 5px !important;
+        font-size: 0.85em !important;
+        border-radius: 0 !important; /* Default is flat rectangles */
+    }
+
+    /* Rounded on both sides for single-day events */
+    .fc-event-start-end {
+        border-radius: 12px !important;
+    }
+
+    /* Rounded on left side only */
+    .fc-event-start-left {
+        border-radius: 12px 0 0 8px !important;
+    }
+
+    /* Rounded on right side only */
+    .fc-event-end-right {
+        border-radius: 0 12px 12px 0 !important;
+    }
+
+    /* Rounded on left side only for first day of multi-day events */
+    .fc-event-start {
+        border-radius: 12px 0 0 12px !important;
+    }
+
+    /* Rounded on right side only for last day of multi-day events */
+    .fc-event-end {
+        border-radius: 0 12px 12px 0 !important;
+    }
+
+    /* No rounding for middle days */
+    .fc-event-middle {
+        border-radius: 0 !important;
+    }
+
+    /* New**/
+    /* Rounded on right side only for last day of multi-day events */
+    .fc-event-end:not(.fc-event-start) {
+        border-radius: 0 12px 12px 0 !important;
+    }
+
+    /* For segments that are both start and end (single day events or events that span whole week) */
+    .fc-event-start.fc-event-end {
+        border-radius: 12px !important;
+    }
+
+    /* For event segments that represent the actual first day of a booking */
+    .fc-daygrid-event.actual-booking-start {
+        border-radius: 12px 0 0 12px !important;
+    }
+
+    /* For event segments that represent the actual last day of a booking */
+    .fc-daygrid-event.actual-booking-end {
+        border-radius: 0 12px 12px 0 !important;
+    }
+
+    /* For event segments that are both the start and end of a booking */
+    .fc-daygrid-event.actual-booking-start.actual-booking-end {
+        border-radius: 12px !important;
+    }
+
+    .source-airbnb {
+        background-color: #ff5a5f !important;
+    }
+
+    .source-agoda {
+        background-color: #5C2D91 !important; /* Agoda Purple */
+        color: white !important;
+    }
+
+    .source-booking {
+        background-color: #003580 !important;
+        color: white !important;
+    }
+
+    .source-traveloka {
+        background-color: #0770E3 !important; /* Traveloka Blue */
+        color: white !important;
+    }
+
+    .source-ctrip {
+        background-color: #2577E3 !important; /* Ctrip Blue */
+        color: white !important;
+    }
+
+    .source-whatsapp {
+        background-color: #25d366 !important;
+    }
+
+    /* Tooltip for events */
+    .event-tooltip {
+        background-color: #fff;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        padding: 10px 15px;
+        max-width: 300px;
+        font-size: 14px;
+        z-index: 1000;
+    }
+
+    .event-tooltip h4 {
+        margin: 0 0 5px 0;
+        font-size: 16px;
+        color: #333;
+    }
+
+    .event-tooltip p {
+        margin: 5px 0;
+    }
+
+    .tooltip-label {
+        font-weight: bold;
+        color: #666;
+    }
+
+    /* Morning/Afternoon highlight */
+    .fc-day-today {
+        background-color: rgba(255, 220, 40, 0.15) !important;
+    }
+
+    /* Calendar view buttons */
+    .fc .fc-button-primary {
+        background-color: #4169E1;
+        border-color: #4169E1;
+    }
+
+    .fc .fc-button-primary:hover {
+        background-color: #2a4eb7;
+        border-color: #2a4eb7;
+    }
+
+    .fc .fc-button-primary:not(:disabled).fc-button-active,
+    .fc .fc-button-primary:not(:disabled):active {
+        background-color: #ee4d2d;
+        border-color: #ee4d2d;
+    }
+
+    /* Legend */
+    .calendar-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-right: 15px;
+    }
+
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        margin-right: 5px;
+        border-radius: 3px;
+    }
+
+    .legend-label {
+        font-size: 0.85rem;
+    }
+
+    .legend-section {
+        display: flex;
+        flex-direction: column;
+        margin-right: 30px;
+    }
+
+    .legend-section-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        color: #555;
+    }
+
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        .calendar-filters {
+            flex-direction: column;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .filter-buttons {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        #calendar {
+            height: 500px;
+        }
+
+        .calendar-legend {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="calendar-title">Booking Calendar</div>
+    </div>
+
+    <div class="calendar-filters">
+        <div class="filter-group">
+            <label for="unit-filter">Unit</label>
+            <select id="unit-filter">
+                <option value="all">All Units</option>
+                {% for unit in units %}
+                <option value="{{ unit.id }}">{{ unit.unit_number }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="source-filter">Booking Source</label>
+            <select id="source-filter">
+                <option value="all">All Sources</option>
+                <option value="Airbnb">Airbnb</option>
+                <option value="Agoda">Agoda</option>
+                <option value="Booking.com">Booking.com</option>
+                <option value="Traveloka">Traveloka</option>
+                <option value="Ctrip">Ctrip</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Phone Call">Phone Call</option>
+                <option value="Direct Walk-In">Walk-In</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="payment-filter">Payment Status</label>
+            <select id="payment-filter">
+                <option value="all">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button id="apply-filters" class="filter-btn apply-btn">Apply Filters</button>
+            <button id="reset-filters" class="filter-btn reset-btn">Reset</button>
+        </div>
+    </div>
+
+    <div id="calendar"></div>
+
+    <div class="calendar-legend">
+        <div class="legend-section">
+            <div class="legend-section-title">Booking Source</div>
+            <div class="legend-item">
+                <div class="legend-color source-airbnb"></div>
+                <div class="legend-label">Airbnb</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color source-agoda"></div>
+                <div class="legend-label">Agoda</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color source-booking"></div>
+                <div class="legend-label">Booking.com</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color source-traveloka"></div>
+                <div class="legend-label">Traveloka</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color source-ctrip"></div>
+                <div class="legend-label">Ctrip</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color source-whatsapp"></div>
+                <div class="legend-label">WhatsApp/Phone/Walk-In/Other</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let bookingsData = [];
+        let filteredData = [];
+
+        // Initialize calendar
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,listMonth'
+            },
+            height: 'auto',
+            selectable: false,
+            nowIndicator: true,
+            dayMaxEvents: true,
+            eventDisplay: 'block',
+            events: [],
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            },
+            views: {
+                listMonth: {
+                    titleFormat: { month: 'long', year: 'numeric' }
+                }
+            },
+
+            // Handle view changes and today button clicks
+            datesSet: function(dateInfo) {
+                // This fires when the calendar navigates to a new date range
+                // Check if we're in list view and if today is in the current range
+                if (calendar.view.type === 'listMonth' || calendar.view.type === 'listWeek') {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const viewStart = new Date(dateInfo.start);
+                    viewStart.setHours(0, 0, 0, 0);
+
+                    const viewEnd = new Date(dateInfo.end);
+                    viewEnd.setHours(0, 0, 0, 0);
+
+                    // If today is within the current view range, scroll to it
+                    if (today >= viewStart && today < viewEnd) {
+                        setTimeout(function() {
+                            scrollToTodayInListView();
+                        }, 300);
+                    }
+                }
+            },
+
+
+
+            eventDidMount: function(info) {
+                // Get the actual booking start and end dates
+                var checkInDate = new Date(info.event.extendedProps.check_in_date);
+                checkInDate.setHours(0, 0, 0, 0);
+
+                var checkOutDate = new Date(info.event.extendedProps.check_out_date);
+                checkOutDate.setHours(0, 0, 0, 0);
+                checkOutDate.setDate(checkOutDate.getDate() - 1); // The day before checkout is the last stay day
+
+                // Get current date for this event segment
+                var currentDate = new Date(info.event.start);
+                currentDate.setHours(0, 0, 0, 0);
+
+                // Determine if this segment is the actual booking start or end date
+                if (isSameDay(currentDate, checkInDate)) {
+                    info.el.classList.add('actual-booking-start');
+                }
+
+                if (isSameDay(currentDate, checkOutDate)) {
+                    info.el.classList.add('actual-booking-end');
+                }
+
+                // Add day counter for list view
+                if (calendar.view.type === 'listMonth' || calendar.view.type === 'listWeek') {
+                    // Get the title element in the list view event
+                    const titleElement = info.el.querySelector('.fc-list-event-title');
+
+                    if (titleElement && info.event.start && info.event.end) {
+                        // We need to get the date of the row from the list day header
+                        // Find the parent tr.fc-list-event
+                        const eventRow = info.el.closest('tr.fc-list-event');
+                        if (!eventRow) return;
+
+                        // Get the previous fc-list-day row that contains the date header
+                        let dayHeader = eventRow.previousElementSibling;
+                        while (dayHeader && !dayHeader.classList.contains('fc-list-day')) {
+                            dayHeader = dayHeader.previousElementSibling;
+                        }
+
+                        if (!dayHeader) return;
+
+                        // Get the date text from the header (format varies by locale but typically "MMM D, YYYY")
+                        const dateCell = dayHeader.querySelector('.fc-list-day-text');
+                        if (!dateCell) return;
+
+                        const dateText = dateCell.textContent;
+
+                        // Parse the date from the text
+                        // Format is typically like "Apr 15, 2025" or some variation
+                        let currentDate = null;
+                        try {
+                            // Try to parse using Date.parse
+                            currentDate = new Date(dateText);
+
+                            // If that fails, try manual parsing
+                            if (isNaN(currentDate.getTime())) {
+                                const dateParts = dateText.split(/[, ]+/); // Split by comma, space or combination
+
+                                // Handle different date formats
+                                if (dateParts.length >= 3) {
+                                    // Format like "Jan 15, 2025"
+                                    const monthMap = {
+                                        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+                                        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
+                                        'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+                                        'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+                                    };
+
+                                    const month = monthMap[dateParts[0]];
+                                    const day = parseInt(dateParts[1].replace(',', ''));
+                                    const year = parseInt(dateParts[2]);
+
+                                    if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+                                        currentDate = new Date(year, month, day);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error parsing date from list view:', e);
+                            return;
+                        }
+
+                        if (!currentDate || isNaN(currentDate.getTime())) {
+                            console.error('Failed to parse date from:', dateText);
+                            return;
+                        }
+
+                        // Set to midnight for proper comparison
+                        currentDate.setHours(0, 0, 0, 0);
+
+                        // Get check-in and check-out dates
+                        const checkInDate = new Date(info.event.extendedProps.check_in_date);
+                        checkInDate.setHours(0, 0, 0, 0);
+
+                        const checkOutDate = new Date(info.event.extendedProps.check_out_date);
+                        checkOutDate.setHours(0, 0, 0, 0);
+
+                        // Calculate total nights
+                        const totalNights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+                        // Calculate which day of the booking this is
+                        if (currentDate >= checkInDate && currentDate < checkOutDate) {
+                            // Calculate days since check-in (0-based, so add 1)
+                            const daysSinceCheckIn = Math.round((currentDate - checkInDate) / (1000 * 60 * 60 * 24));
+                            const dayOfStay = daysSinceCheckIn + 1;
+
+                            // Add the day counter to the title
+                            titleElement.innerHTML = `${titleElement.innerHTML} <span style="color:#eed12d;font-weight:bold;font-size:0.95em;margin-left:6px;">(Day ${dayOfStay}/${totalNights})</span>`;
+                        }
+                    }
+                }
+
+
+                // Add tooltip to events
+                const tooltip = document.createElement('div');
+                tooltip.className = 'event-tooltip';
+                tooltip.innerHTML = `
+                    <h4>${info.event.title}</h4>
+                    <p><span class="tooltip-label">Guest:</span> ${info.event.extendedProps.guest_name}</p>
+                    <p><span class="tooltip-label">Nights:</span> ${info.event.extendedProps.nights}</p>
+                    <p><span class="tooltip-label">Guests:</span> ${info.event.extendedProps.guests}</p>
+                    <p><span class="tooltip-label">Price:</span> RM${info.event.extendedProps.price}</p>
+                    <p><span class="tooltip-label">Source:</span> ${info.event.extendedProps.source}</p>
+                    <p><span class="tooltip-label">Status:</span> ${info.event.extendedProps.payment_status}</p>
+                    ${info.event.extendedProps.contact ? `<p><span class="tooltip-label">Contact:</span> ${info.event.extendedProps.contact}</p>` : ''}
+                `;
+
+                const eventEl = info.el;
+
+                eventEl.addEventListener('mouseover', function() {
+                    document.body.appendChild(tooltip);
+                    positionTooltip(tooltip, eventEl);
+                });
+
+                eventEl.addEventListener('mousemove', function(e) {
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+                    tooltip.style.top = (e.pageY + 10) + 'px';
+                });
+
+                eventEl.addEventListener('mouseout', function() {
+                    if (tooltip.parentNode) {
+                        tooltip.parentNode.removeChild(tooltip);
+                    }
+                });
+
+                // Add click handler to navigate to edit page
+                eventEl.style.cursor = 'pointer';
+                eventEl.addEventListener('click', function() {
+                    window.location.href = "{{ url_for('bookings.get_booking', id=0) }}".replace('/0', '/') + info.event.extendedProps.booking_id;
+                });
+            }
+        });
+
+        // Function to scroll to today's section in list view
+        function scrollToTodayInListView() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Find all date headers in the list view
+            const dateHeaders = document.querySelectorAll('.fc-list-day');
+            let todayHeader = null;
+
+            for (const header of dateHeaders) {
+                const dateCell = header.querySelector('.fc-list-day-text');
+                if (!dateCell) continue;
+
+                const dateText = dateCell.textContent;
+                let headerDate = null;
+
+                try {
+                    // Try to parse the date
+                    headerDate = new Date(dateText);
+
+                    // If that fails, try manual parsing
+                    if (isNaN(headerDate.getTime())) {
+                        const dateParts = dateText.split(/[, ]+/);
+
+                        if (dateParts.length >= 3) {
+                            const monthMap = {
+                                'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+                                'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
+                                'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+                                'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+                            };
+
+                            const month = monthMap[dateParts[0]];
+                            const day = parseInt(dateParts[1].replace(',', ''));
+                            const year = parseInt(dateParts[2]);
+
+                            if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+                                headerDate = new Date(year, month, day);
+                            }
+                        }
+                    }
+
+                    if (headerDate && !isNaN(headerDate.getTime())) {
+                        headerDate.setHours(0, 0, 0, 0);
+
+                        // Check if this is today's date
+                        if (headerDate.getTime() === today.getTime()) {
+                            todayHeader = header;
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing date:', e);
+                }
+            }
+
+            // If we found today's header, scroll to it
+            if (todayHeader) {
+                todayHeader.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+
+                // Add a subtle highlight effect
+                todayHeader.style.backgroundColor = '#fffbf0';
+                todayHeader.style.border = '2px solid #ffd700';
+                todayHeader.style.borderRadius = '4px';
+
+                // Remove the highlight after 3 seconds
+                setTimeout(() => {
+                    todayHeader.style.backgroundColor = '';
+                    todayHeader.style.border = '';
+                    todayHeader.style.borderRadius = '';
+                }, 3000);
+            } else {
+                console.log('Today\'s date not found in current list view');
+            }
+        }
+
+        // Initialize the calendar
+        calendar.render();
+
+        // Add event listener to the existing FullCalendar "Today" button
+        // Use multiple approaches to handle the disabled button
+        setTimeout(function() {
+            const todayButton = document.querySelector('.fc-today-button');
+            if (todayButton) {
+                // Method 1: Try to override click even when disabled
+                todayButton.addEventListener('click', function(e) {
+                    if (calendar.view.type === 'listMonth' || calendar.view.type === 'listWeek') {
+                        setTimeout(function() {
+                            scrollToTodayInListView();
+                        }, 100);
+                    }
+                }, true);
+
+                // Method 2: Use mousedown as backup
+                todayButton.addEventListener('mousedown', function(e) {
+                    if (calendar.view.type === 'listMonth' || calendar.view.type === 'listWeek') {
+                        setTimeout(function() {
+                            scrollToTodayInListView();
+                        }, 100);
+                    }
+                }, true);
+
+                // Method 3: Replace the button's onclick if it's disabled
+                if (todayButton.disabled) {
+                    todayButton.style.pointerEvents = 'auto';
+                    todayButton.style.opacity = '1';
+
+                    // Create a wrapper click handler
+                    const originalOnClick = todayButton.onclick;
+                    todayButton.onclick = function(e) {
+                        // Call original function if it exists and we're not in list view
+                        if (originalOnClick && (calendar.view.type !== 'listMonth' && calendar.view.type !== 'listWeek')) {
+                            originalOnClick.call(this, e);
+                        }
+
+                        // Always scroll in list view
+                        if (calendar.view.type === 'listMonth' || calendar.view.type === 'listWeek') {
+                            scrollToTodayInListView();
+                        }
+                    };
+                }
+            }
+        }, 100);
+
+        // Function to position tooltip
+        function positionTooltip(tooltip, element) {
+            const rect = element.getBoundingClientRect();
+            tooltip.style.position = 'absolute';
+            tooltip.style.left = (rect.right + 10) + 'px';
+            tooltip.style.top = rect.top + 'px';
+        }
+
+        // Fetch bookings data
+        fetchBookings();
+
+        // Apply filters button click
+        document.getElementById('apply-filters').addEventListener('click', function() {
+            applyFilters();
+        });
+
+        // Reset filters button click
+        document.getElementById('reset-filters').addEventListener('click', function() {
+            resetFilters();
+        });
+
+        // Function to fetch bookings
+        function fetchBookings() {
+            // This would normally fetch from an API endpoint
+            // For now, we'll use a placeholder approach
+
+            // Create an API endpoint to fetch all bookings for all units
+            fetch('/api/calendar/bookings')
+                .then(response => response.json())
+                .then(data => {
+                    bookingsData = data;
+                    filteredData = [...bookingsData]; // Create a copy for filtering
+                    renderEvents(filteredData);
+                })
+                .catch(error => {
+                    console.error('Error fetching bookings:', error);
+
+                    // For now, let's create some sample data for demonstration
+                    generateSampleData();
+                    filteredData = [...bookingsData];
+                    renderEvents(filteredData);
+                });
+        }
+
+        // Generate sample data for demonstration
+        function generateSampleData() {
+            bookingsData = [];
+
+            // Get units from the filter dropdown
+            const units = [];
+            const unitSelect = document.getElementById('unit-filter');
+            for (let i = 1; i < unitSelect.options.length; i++) {
+                units.push({
+                    id: unitSelect.options[i].value,
+                    unit_number: unitSelect.options[i].text
+                });
+            }
+
+            // If no units found, create some placeholder ones
+            if (units.length === 0) {
+                units.push(
+                    { id: 1, unit_number: 'A-101' },
+                    { id: 2, unit_number: 'A-102' },
+                    { id: 3, unit_number: 'B-201' },
+                    { id: 4, unit_number: 'C-301' }
+                );
+            }
+
+            // Sample guest names
+            const guestNames = [
+                'John Smith', 'Sarah Lee', 'Ahmad Ali', 'Wang Wei', 'Maria Garcia',
+                'David Chen', 'Priya Patel', 'Michael Johnson', 'Emma Wilson', 'Raj Kumar'
+            ];
+
+            // Sample sources
+            const sources = [
+                'Airbnb', 'Agoda', 'Booking.com', 'Traveloka', 'Ctrip',
+                'Mudah.my', 'iBilik', 'WhatsApp', 'Phone Call', 'Direct Walk-In', 'Other'
+            ];
+
+            // Sample payment statuses
+            const paymentStatuses = ['Pending', 'Partial Payment', 'Fully Paid'];
+
+            // Generate sample bookings for the next 3 months
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setMonth(today.getMonth() + 3);
+
+            let bookingId = 1;
+
+            units.forEach(unit => {
+                // Generate 3-5 bookings per unit
+                const bookingsCount = 3 + Math.floor(Math.random() * 3);
+
+                for (let i = 0; i < bookingsCount; i++) {
+                    // Random start date within the 3 month period
+                    const startDate = new Date(today);
+                    startDate.setDate(today.getDate() + Math.floor(Math.random() * 90));
+
+                    // Random length of stay (1-7 nights)
+                    const nights = 1 + Math.floor(Math.random() * 7);
+
+                    const endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + nights);
+
+                    // Random guest details
+                    const guestName = guestNames[Math.floor(Math.random() * guestNames.length)];
+                    const guestCount = 1 + Math.floor(Math.random() * 4);
+
+                    // Random price (RM150-500)
+                    const price = (150 + Math.floor(Math.random() * 350)).toFixed(2);
+
+                    // Random source and payment status
+                    const source = sources[Math.floor(Math.random() * sources.length)];
+                    const paymentStatus = paymentStatuses[Math.floor(Math.random() * paymentStatuses.length)];
+
+                    // Add booking to data
+                    bookingsData.push({
+                        id: bookingId++,
+                        unit_id: unit.id,
+                        unit_number: unit.unit_number,
+                        guest_name: guestName,
+                        check_in_date: startDate.toISOString().split('T')[0],
+                        check_out_date: endDate.toISOString().split('T')[0],
+                        nights: nights,
+                        guests: guestCount,
+                        price: price,
+                        source: source,
+                        payment_status: paymentStatus,
+                        contact: '+' + Math.floor(Math.random() * 100000000000)
+                    });
+                }
+            });
+        }
+
+        // Function to render events on the calendar
+        function renderEvents(data) {
+            // Clear existing events
+            calendar.removeAllEvents();
+
+            // Add events to calendar
+            data.forEach(booking => {
+                // Determine color based on booking source
+                let backgroundColor, textColor;
+                let classNames = ['booking-event'];
+
+                switch(booking.source) {
+                    case 'Airbnb':
+                        backgroundColor = '#ff5a5f';
+                        classNames.push('source-airbnb');
+                        break;
+                    case 'Agoda':
+                        backgroundColor = '#5C2D91'; // Agoda Purple
+                        textColor = 'white';
+                        classNames.push('source-agoda');
+                        break;
+                    case 'Booking.com':
+                        backgroundColor = '#003580';
+                        textColor = 'white';
+                        classNames.push('source-booking');
+                        break;
+                    case 'Traveloka':
+                        backgroundColor = '#0770E3'; // Traveloka Blue
+                        textColor = 'white';
+                        classNames.push('source-traveloka');
+                        break;
+                    case 'Ctrip':
+                        backgroundColor = '#2577E3'; // Ctrip Blue
+                        textColor = 'white';
+                        classNames.push('source-ctrip');
+                        break;
+                    case 'Mudah.my':
+                        backgroundColor = '#E5151A';
+                        textColor = 'white';
+                        classNames.push('source-mudah');
+                        break;
+                    case 'iBilik':
+                        backgroundColor = '#FFA500';
+                        classNames.push('source-ibilik');
+                        break;
+                    case 'WhatsApp':
+                    case 'Phone Call':
+                    case 'Direct Walk-In':
+                    case 'Other':
+                        backgroundColor = '#25d366';
+                        classNames.push('source-whatsapp');
+                        break;
+                    default:
+                        backgroundColor = '#25d366';
+                        classNames.push('source-whatsapp');
+                }
+
+                // Add event to calendar
+                calendar.addEvent({
+                    id: booking.id,
+                    title: booking.unit_number,
+                    start: booking.check_in_date,
+                    end: booking.check_out_date,
+                    backgroundColor: backgroundColor,
+                    borderColor: backgroundColor,
+                    textColor: textColor || 'black',
+                    classNames: classNames,
+                    extendedProps: {
+                        booking_id: booking.id,
+                        unit_id: booking.unit_id,
+                        guest_name: booking.guest_name,
+                        nights: booking.nights,
+                        guests: booking.guests,
+                        price: booking.price,
+                        source: booking.source,
+                        payment_status: booking.payment_status,
+                        contact: booking.contact,
+                        check_in_date: booking.check_in_date,
+                        check_out_date: booking.check_out_date
+                    }
+                });
+            });
+        }
+
+        // Apply filters to bookings data
+        function applyFilters() {
+            const unitFilter = document.getElementById('unit-filter').value;
+            const sourceFilter = document.getElementById('source-filter').value;
+            const paymentFilter = document.getElementById('payment-filter').value;
+
+            // Filter the booking data
+            filteredData = bookingsData.filter(booking => {
+                // Apply unit filter
+                if (unitFilter !== 'all' && booking.unit_id != unitFilter) {
+                    return false;
+                }
+
+                // Apply source filter
+                if (sourceFilter !== 'all' && booking.source !== sourceFilter) {
+                    return false;
+                }
+
+                // Apply payment status filter
+                if (paymentFilter !== 'all' && booking.payment_status !== paymentFilter) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Render filtered events
+            renderEvents(filteredData);
+        }
+
+        // Reset filters to show all bookings
+        function resetFilters() {
+            document.getElementById('unit-filter').value = 'all';
+            document.getElementById('source-filter').value = 'all';
+            document.getElementById('payment-filter').value = 'all';
+
+            filteredData = [...bookingsData];
+            renderEvents(filteredData);
+        }
+    });
+
+    // Helper functions for date comparison
+    function isSameDay(date1, date2) {
+        if (!date1 || !date2) return false;
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getDate() === date2.getDate();
+    }
+
+    function addDays(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+</script>
+{% endblock %}

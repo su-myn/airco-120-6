@@ -1,0 +1,78 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Manage Holidays - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <h2>Manage Holiday Types</h2>
+    <a href="{{ url_for('admin.add_holiday_type') }}" class="admin-btn">Add Holiday Type</a>
+
+    <table class="admin-table" style="margin-top: 20px;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Color</th>
+                <th>System Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for type in holiday_types %}
+            <tr>
+                <td>{{ type.id }}</td>
+                <td>{{ type.name }}</td>
+                <td>
+                    <span style="display: inline-block; width: 20px; height: 20px; background-color: {{ type.color }}; border-radius: 4px;"></span>
+                    {{ type.color }}
+                </td>
+                <td>{{ "Yes" if type.is_system else "No" }}</td>
+                <td>
+                    {% if not type.is_system %}
+                    <a href="{{ url_for('admin.edit_holiday_type', id=type.id) }}" class="admin-btn">Edit</a>
+                    <a href="#" onclick="if(confirm('Are you sure you want to delete this holiday type?')) window.location.href='{{ url_for('admin.delete_holiday_type', id=type.id) }}'; return false;" class="admin-btn secondary">Delete</a>
+                    {% else %}
+                    <span>System type (cannot edit)</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="admin-card">
+    <h2>Manage Holidays</h2>
+
+    <table class="admin-table" style="margin-top: 20px;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Recurring</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for holiday in holidays %}
+            <tr>
+                <td>{{ holiday.id }}</td>
+                <td>{{ holiday.name }}</td>
+                <td>{{ holiday.date.strftime('%b %d, %Y') }}</td>
+                <td>
+                    <span style="display: inline-block; width: 20px; height: 20px; background-color: {{ holiday.holiday_type.color }}; border-radius: 4px;"></span>
+                    {{ holiday.holiday_type.name }}
+                </td>
+                <td>{{ "Yes" if holiday.is_recurring else "No" }}</td>
+                <td>
+                    <a href="{{ url_for('admin.edit_holiday', id=holiday.id) }}" class="admin-btn">Edit</a>
+                    <a href="#" onclick="if(confirm('Are you sure you want to delete this holiday?')) window.location.href='{{ url_for('admin.delete_holiday', id=holiday.id) }}'; return false;" class="admin-btn secondary">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

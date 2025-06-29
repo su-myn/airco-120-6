@@ -1,0 +1,1934 @@
+{% extends "base.html" %}
+
+{% block title %}Issues - PropertyHub{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .feature-cards {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .feature-card {
+        background-color: #F0C14B;
+        border-radius: 30px;
+        padding: 30px 20px;
+        text-align: center;
+        flex: 1;
+        min-width: 250px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 20px;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+
+    /* Analytics Cards Styles */
+    .analytics-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .analytics-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        flex: 1;
+        min-width: 150px;
+        text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .analytics-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .analytics-card::after {
+        content: "Click to filter";
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        font-size: 0.7rem;
+        color: #999;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .analytics-card:hover::after {
+        opacity: 1;
+    }
+
+    .analytics-card h3 {
+        margin: 0 0 5px 0;
+        font-size: 1.8rem;
+    }
+
+    .analytics-card p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .card-pending {
+        border-left: 4px solid #f0ad4e;
+    }
+
+    .card-pending h3 {
+        color: #f0ad4e;
+    }
+
+    .card-cost {
+        border-left: 4px solid #ee4d2d;
+    }
+
+    .card-cost h3 {
+        color: #ee4d2d;
+    }
+
+    .card-today {
+        border-left: 4px solid #17a2b8;
+    }
+
+    .card-today h3 {
+        color: #17a2b8;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .data-table th, .data-table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .data-table th {
+        cursor: pointer;
+        position: relative;
+    }
+
+    .data-table th:hover {
+        background-color: #f5f5f5;
+    }
+
+    .data-table th.sorted-asc::after {
+        content: "▲";
+        margin-left: 5px;
+        font-size: 0.8em;
+    }
+
+    .data-table th.sorted-desc::after {
+        content: "▼";
+        margin-left: 5px;
+        font-size: 0.8em;
+    }
+
+    .action-btn {
+        color: #4169E1;
+        text-decoration: none;
+        margin-right: 10px;
+    }
+
+    .action-btn:hover {
+        text-decoration: underline;
+    }
+
+    .add-btn {
+        display: block;
+        width: 100%;
+        text-align: center;
+        background-color: #4169E1;
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-bottom: 20px;
+        cursor: pointer;
+    }
+
+    .add-form {
+        display: none;
+        margin-top: 20px;
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+    }
+
+    .update-form {
+        background-color: #f0f8ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .form-actions button {
+        flex: 1;
+    }
+
+    .form-actions button[type="button"] {
+        background-color: #6c757d;
+    }
+
+    .active-section {
+        display: block;
+    }
+
+    .inactive-section {
+        display: none;
+    }
+
+    .search-container {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .search-input {
+        flex-grow: 1;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .search-btn {
+        background-color: #4169E1;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .reset-btn {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    /* Add styles for the new issue item section */
+    .issue-items-container {
+        margin-top: 10px;
+        display: none;
+    }
+
+    #custom-issue-container {
+        margin-top: 10px;
+        display: none;
+    }
+
+    /* Add this to show dropdown items in a more organized way */
+    select.issue-items {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    /* New column in the table for Issue Item */
+    .data-table th.issue-item-col,
+    .data-table td.issue-item-col {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Additional styles for the form elements */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .form-group textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    /* Styles for priority and status indicators */
+    .priority-high {
+        color: #d9534f;
+        font-weight: bold;
+    }
+
+    .priority-medium {
+        color: #f0ad4e;
+        font-weight: bold;
+    }
+
+    .priority-low {
+        color: #5cb85c;
+        font-weight: bold;
+    }
+
+    .status-pending {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #f0ad4e;
+        color: white;
+        border-radius: 3px;
+    }
+
+    .status-in-progress {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #5bc0de;
+        color: white;
+        border-radius: 3px;
+    }
+
+    .status-resolved {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #5cb85c;
+        color: white;
+        border-radius: 3px;
+    }
+
+    .status-rejected {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #d9534f;
+        color: white;
+        border-radius: 3px;
+    }
+
+    /* Pagination styles */
+    .pagination-container {
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .pagination-btn {
+        padding: 5px 10px;
+        margin: 0 5px;
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+        .analytics-cards {
+            flex-direction: column;
+        }
+
+        .analytics-card {
+            min-width: 100%;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            display: block;
+            width: 100%;
+        }
+
+        .data-table th, .data-table td {
+            padding: 8px 5px;
+            font-size: 14px;
+        }
+
+        /* Hide less important columns on small screens */
+        .data-table .hide-on-mobile {
+            display: none;
+        }
+
+        /* Stack the form inputs on mobile */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        /* Make buttons more tappable on mobile */
+        .action-btn, button {
+            padding: 8px;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .form-actions button {
+            margin-bottom: 10px;
+        }
+
+        .search-container {
+            flex-direction: column;
+        }
+
+        .search-input, .search-btn, .reset-btn {
+            width: 100%;
+        }
+
+        .pagination-container {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .form-row .form-group {
+        flex: 1;
+        min-width: 150px;
+        margin-bottom: 0;
+    }
+
+    .full-width {
+        width: 100%;
+        flex-basis: 100% !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .form-row .form-group {
+            flex-basis: 100%;
+            margin-bottom: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% with
+  pending_count = issues|selectattr('status', 'defined')|selectattr('status.name', 'equalto', 'Pending')|list|length,
+  issues_added_today = issues|selectattr('date_added', 'defined')|rejectattr('date_added', 'lt', now - timedelta(days=1))|list|length,
+  total_cost_month = (issues|selectattr('cost', 'defined')|rejectattr('cost', 'none')|selectattr('date_added', 'defined')|selectattr('date_added', 'ge', now.replace(day=1, hour=0, minute=0, second=0, microsecond=0))|map(attribute='cost')|sum)
+%}
+<div id="issues-section">
+    <!-- Updated Analytics Cards Section - Only 3 cards remaining -->
+    <div class="analytics-cards">
+        <div class="analytics-card card-pending">
+            <h3>{{ pending_count }}</h3>
+            <p>Pending Items</p>
+        </div>
+        <div class="analytics-card card-today">
+            <h3>{{ issues_added_today }}</h3>
+            <p>Issues Added Today</p>
+        </div>
+        <div class="analytics-card card-cost">
+            <h3>{{ total_cost_month }}</h3>
+            <p>Total Issues Spent this month (RM)</p>
+        </div>
+    </div>
+
+    {% if current_user.has_permission('can_manage_issues') %}
+    <style>
+      #issue-form-toggle {
+        display: none; /* Hide the checkbox */
+      }
+
+      /* Use the checkbox's checked state to control form visibility */
+      #issue-form-toggle:checked ~ #issue-form {
+        display: block;
+      }
+
+      /* Form starts hidden */
+      #issue-form {
+        display: none;
+      }
+
+      /* Styling for the compact form layout */
+      .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+      }
+
+      .form-row .form-group {
+        flex: 1;
+        min-width: 200px;
+        margin-bottom: 0;
+      }
+
+      /* Make the description field take full width */
+      .full-width {
+        width: 100%;
+        flex-basis: 100%;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .form-row .form-group {
+          flex-basis: 100%;
+          margin-bottom: 15px;
+        }
+      }
+    </style>
+
+    <!-- Checkbox that controls visibility -->
+    <input type="checkbox" id="issue-form-toggle">
+
+    <!-- Label styled as a button -->
+    <label for="issue-form-toggle" class="add-btn">+ Add Issue</label>
+
+    <!-- The form itself - redesigned with rows -->
+    <form id="issue-form" class="add-form" method="POST" action="{{ url_for('issues.add_issue') }}">
+        <!-- Row 1: Unit, Category, Issue Items -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="issue-unit">Unit *</label>
+                <select id="issue-unit" name="unit_id" required class="unit-select">
+                    <option value="">Select Unit</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.id }}">{{ unit.unit_number }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="issue-category">Category</label>
+                <select id="issue-category" name="category_id" onchange="loadIssueItems(this.value)">
+                    <option value="">Select Category</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" id="issue-items-container" style="display: none;">
+                <label for="issue-item">Issue</label>
+                <select id="issue-item" name="issue_item_id" onchange="handleIssueItemChange(this.value)">
+                    <option value="">Select Issue</option>
+                    <!-- This will be populated dynamically -->
+                </select>
+            </div>
+        </div>
+
+        <!-- Custom issue container -->
+        <div id="custom-issue-container" style="display: none; margin-bottom: 15px;">
+            <label for="custom-issue">Custom Issue</label>
+            <input type="text" id="custom-issue" name="custom_issue" placeholder="Enter custom issue">
+        </div>
+
+        <!-- Row 2: Description (full width) -->
+        <div class="form-row">
+            <div class="form-group full-width">
+                <label for="issue-description">Description *</label>
+                <textarea id="issue-description" name="description" required style="height: 60px;"></textarea>
+            </div>
+        </div>
+
+        <!-- Row 3: Reported By, Priority, Status, Type -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="issue-reported-by">Reported By</label>
+                <select id="issue-reported-by" name="reported_by_id">
+                    <option value="">Select Reporter</option>
+                    {% for reporter in reported_by_options %}
+                    <option value="{{ reporter.id }}">{{ reporter.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="issue-priority">Priority</label>
+                <select id="issue-priority" name="priority_id">
+                    <option value="">Select Priority</option>
+                    {% for priority in priorities %}
+                    <option value="{{ priority.id }}">{{ priority.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="issue-status">Status</label>
+                <select id="issue-status" name="status_id">
+                    <option value="">Select Status</option>
+                    {% for status in statuses %}
+                    {% if status.name not in ['In Progress', 'Rejected'] %}
+                    <option value="{{ status.id }}" {% if status.name == 'Pending' %}selected{% endif %}>{{ status.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="issue-type">Type</label>
+                <select id="issue-type" name="type_id">
+                    <option value="">Select Type</option>
+                    {% for type in types %}
+                    <option value="{{ type.id }}">{{ type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Row 4: Solution (full width) -->
+        <div class="form-row">
+            <div class="form-group full-width">
+                <label for="issue-solution">Solution</label>
+                <textarea id="issue-solution" name="solution" style="height: 60px;"></textarea>
+            </div>
+        </div>
+
+        <!-- Row 5: Guest Name, Cost, Assigned To, Submit Button -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="issue-guest-name">Guest Name</label>
+                <input type="text" id="issue-guest-name" name="guest_name">
+            </div>
+
+            <div class="form-group">
+                <label for="issue-cost">Cost</label>
+                <input type="number" id="issue-cost" name="cost" step="0.01" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="issue-assigned-to">Assigned To</label>
+                <input type="text" id="issue-assigned-to" name="assigned_to">
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" style="width: 100%; margin-top: 21px;">Submit Issue</button>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    <div class="search-container">
+        <input type="text" id="issue-search" class="search-input" placeholder="Search issues...">
+        <button class="search-btn" onclick="searchTable('issue')">Search</button>
+        <button class="reset-btn" onclick="resetSearch('issue')">Reset</button>
+    </div>
+
+    <div class="filters-row" style="margin-bottom: 20px; background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-date-added" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Date Added</label>
+                <select id="filter-date-added" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="last7days">Last 7 days</option>
+                    <option value="thismonth">This Month</option>
+                    <option value="lastmonth">Last Month</option>
+                    <option value="thisyear">This Year</option>
+                    <option value="lastyear">Last Year</option>
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-unit" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Unit</label>
+                <select id="filter-unit" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">All Units</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.unit_number }}">{{ unit.unit_number }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-category" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Category</label>
+                <select id="filter-category" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.name }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-issue" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Issue</label>
+                <input type="text" id="filter-issue" placeholder="Filter by issue" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-reported-by" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Reported By</label>
+                <select id="filter-reported-by" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">All Reporters</option>
+                    {% for reporter in reported_by_options %}
+                    <option value="{{ reporter.name }}">{{ reporter.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-priority" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Priority</label>
+                <select id="filter-priority" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">All Priorities</option>
+                    {% for priority in priorities %}
+                    <option value="{{ priority.name }}">{{ priority.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-status" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Status</label>
+                <select id="filter-status" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">All Statuses</option>
+                    {% for status in statuses %}
+                    {% if status.name not in ['In Progress', 'Rejected'] %}
+                    <option value="{{ status.name }}">{{ status.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 140px;">
+                <label for="filter-type" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;">Type</label>
+                <select id="filter-type" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">All Types</option>
+                    {% for type in types %}
+                    <option value="{{ type.name }}">{{ type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex: 0.5; min-width: 80px;">
+                <button id="apply-filters-btn" class="apply-btn" style="width: 100%; padding: 8px; background-color: #4169E1; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter results counter -->
+    <div id="filter-results-counter" style="margin-bottom: 15px; font-size: 0.9rem; color: #555;">
+        Showing <span id="visible-rows-count">{{ issues|length }}</span> of {{ issues|length }} total issues
+    </div>
+
+    <div class="table-responsive">
+        <table class="data-table" id="issue-table">
+            <thead>
+                <tr>
+                    <th onclick="sortTable('issue', 0)">Unit</th>
+                    <th onclick="sortTable('issue', 1)">Description</th>
+                    <th onclick="sortTable('issue', 2)">Category</th>
+                    <th onclick="sortTable('issue', 3)" class="issue-item-col">Issue</th>
+                    <th onclick="sortTable('issue', 4)">Date Added</th>
+                    <th onclick="sortTable('issue', 5)">Reported by</th>  <!-- Added column -->
+                    <th onclick="sortTable('issue', 6)">Priority</th>
+                    <th onclick="sortTable('issue', 7)">Status</th>
+                    <th onclick="sortTable('issue', 8)">Type</th>  <!-- Added column -->
+                    <th onclick="sortTable('issue', 9)">Solution</th>
+                    <th onclick="sortTable('issue', 10)">Guest Name</th>
+                    <th onclick="sortTable('issue', 11)">Cost</th>
+                    <th onclick="sortTable('issue', 12)">Assigned To</th>
+                    {% if current_user.has_permission('can_manage_issues') %}
+                    <th>Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in issues %}
+                <tr id="issue-row-{{ issue.id }}">
+                    <td>{{ issue.unit }}</td>
+                    <td>{{ issue.description }}</td>
+                    <td>{{ issue.category.name if issue.category else '' }}</td>
+                    <td class="issue-item-col">{{ issue.issue_item.name if issue.issue_item else '' }}</td>
+                    <td>{{ issue.date_added | malaysia_time }}</td>
+                    <td>{{ issue.reported_by.name if issue.reported_by else '' }}</td>  <!-- Added cell -->
+                    <td class="priority-{{ issue.priority.name.lower() if issue.priority else '' }}">
+                        {{ issue.priority.name if issue.priority else '' }}
+                    </td>
+                    <td>
+                        <span class="status-{{ issue.status.name.lower().replace(' ', '-') if issue.status else '' }}">
+                            {{ issue.status.name if issue.status else '' }}
+                        </span>
+                    </td>
+                    <td>{{ issue.type.name if issue.type else '' }}</td>  <!-- Added cell -->
+                    <td>{{ issue.solution }}</td>
+                    <td>{{ issue.guest_name }}</td>
+                    <td>{{ issue.cost }}</td>
+                    <td>{{ issue.assigned_to }}</td>
+                    {% if current_user.has_permission('can_manage_issues') %}
+                    <td>
+                        <a href="#" class="action-btn" onclick="showUpdateForm('issue', {{ issue.id }}); return false;">Edit</a>
+                        <a href="{{ url_for('issues.delete_issue', id=issue.id) }}" class="action-btn">Delete</a>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="issue-no-results" class="no-results" style="display: none;">No results found</div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container">
+        <div id="pagination-info" style="color: #666;">
+            Showing <span id="pagination-start">1</span> to <span id="pagination-end">20</span> of <span id="pagination-total">{{ issues|length }}</span> issues
+        </div>
+        <div class="pagination-controls">
+            <button id="prev-page" class="pagination-btn" disabled>Previous</button>
+            <span id="pagination-current-page" style="margin: 0 10px; font-weight: bold;">1</span>
+            of
+            <span id="pagination-total-pages">{{ (issues|length / 20)|round(0, 'ceil')|int }}</span>
+            <button id="next-page" class="pagination-btn" {% if issues|length <= 20 %}disabled{% endif %}>Next</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global variable to store issue items by category
+    const issueItemsByCategory = {
+        {% for category_id, items in issue_items_by_category.items() %}
+        "{{ category_id }}": [
+            {% for item in items %}
+            { id: "{{ item.id }}", name: "{{ item.name }}" },
+            {% endfor %}
+        ],
+        {% endfor %}
+    };
+
+    // Define base URLs for API endpoints - FIX 1
+    const issueItemsApiUrl = "{{ url_for('issues.get_issue_items', category_id=1) }}".slice(0, -1);
+    const updateIssueUrl = "{{ url_for('issues.update_issue', id=1) }}".slice(0, -1);
+    const getIssueApiUrl = "{{ url_for('issues.get_issue', id=1) }}".slice(0, -1);
+
+    // Load issue items for edit form
+    function loadIssueItemsForEdit(categoryId, issueId, selectedItemId = null, selectedItemName = '') {
+        const issueItemsContainer = document.getElementById(`issue-items-container-${issueId}`);
+        const issueItemSelect = document.getElementById(`issue-issue-item-${issueId}`);
+        const customIssueContainer = document.getElementById(`custom-issue-container-${issueId}`);
+
+        // Clear previous options
+        issueItemSelect.innerHTML = '<option value="">Select Issue</option><option value="custom">+ Add Custom Issue</option>';
+
+        if (!categoryId) {
+            issueItemsContainer.style.display = 'none';
+            customIssueContainer.style.display = 'none';
+            return;
+        }
+
+        // Show the container
+        issueItemsContainer.style.display = 'block';
+
+        // Fetch issue items for this category - FIXED to use the baseUrl
+        fetch(`${issueItemsApiUrl}${categoryId}`)
+            .then(response => response.json())
+            .then(items => {
+                let foundMatch = false;
+
+                // Add items to dropdown
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.name;
+
+                    // Select the correct option if it matches by ID or name
+                    if ((selectedItemId && item.id == selectedItemId) ||
+                        (selectedItemName && item.name === selectedItemName)) {
+                        option.selected = true;
+                        foundMatch = true;
+                    }
+
+                    issueItemSelect.appendChild(option);
+                });
+
+                // If we didn't find a match but have a name, it might be a custom item
+                if (!foundMatch && selectedItemName && selectedItemName.trim() !== '') {
+                    const customOption = issueItemSelect.querySelector('option[value="custom"]');
+                    if (customOption) {
+                        customOption.selected = true;
+
+                        // Show and populate the custom input
+                        customIssueContainer.style.display = 'block';
+                        const customInput = document.getElementById(`issue-custom-issue-${issueId}`);
+                        if (customInput) {
+                            customInput.value = selectedItemName;
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Error loading issue items:', error));
+    }
+
+    // Handle issue item change for edit form
+    function handleIssueItemChangeForEdit(value, issueId) {
+        const customIssueContainer = document.getElementById(`custom-issue-container-${issueId}`);
+
+        if (value === 'custom') {
+            customIssueContainer.style.display = 'block';
+        } else {
+            customIssueContainer.style.display = 'none';
+        }
+    }
+
+    // Load issue items based on selected category
+    function loadIssueItems(categoryId) {
+        const issueItemsContainer = document.getElementById('issue-items-container');
+        const issueItemSelect = document.getElementById('issue-item');
+        const customIssueContainer = document.getElementById('custom-issue-container');
+
+        // Clear previous options
+        issueItemSelect.innerHTML = '<option value="">Select Issue</option><option value="custom">+ Add Custom Issue</option>';
+
+        if (!categoryId) {
+            issueItemsContainer.style.display = 'none';
+            customIssueContainer.style.display = 'none';
+            return;
+        }
+
+        // Show the container
+        issueItemsContainer.style.display = 'block';
+
+        // Populate issue items from our cached data
+        const items = issueItemsByCategory[categoryId] || [];
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.name;
+            issueItemSelect.appendChild(option);
+        });
+    }
+
+    // Handle issue item change
+    function handleIssueItemChange(value) {
+        const customIssueContainer = document.getElementById('custom-issue-container');
+
+        if (value === 'custom') {
+            customIssueContainer.style.display = 'block';
+        } else {
+            customIssueContainer.style.display = 'none';
+        }
+    }
+
+    // Toggle function
+    function toggleForm(formId) {
+        console.log('Toggle function called for:', formId);
+        const form = document.getElementById(formId);
+
+        // Check if form exists
+        if (!form) {
+            console.error('Form not found:', formId);
+            return;
+        }
+
+        // Get current display state
+        const currentDisplay = window.getComputedStyle(form).display;
+
+        // Toggle visibility
+        if (currentDisplay === 'none') {
+            form.style.display = 'block';
+        } else {
+            form.style.display = 'none';
+        }
+    }
+
+    // Update Form
+    function showUpdateForm(type, id) {
+        const formId = `${type}-update-form-${id}`;
+        const rowId = `${type}-row-${id}`;
+
+        const updateFormElement = document.getElementById(formId);
+
+        // If the form is already visible, hide it
+        if (updateFormElement) {
+            updateFormElement.remove();
+            return;
+        }
+
+        // Get the row data
+        const row = document.getElementById(rowId);
+        const cells = row.getElementsByTagName('td');
+
+        // Get the unit from the cell (first column)
+        const unitName = cells[0].innerText;
+        const categoryName = cells[2].innerText;
+        const issueItemName = cells[3].innerText;
+
+        // Create form with pre-filled data from the row
+        let formHTML = `<tr id="${formId}"><td colspan="14">
+            <form method="POST" class="update-form" data-form-id="${id}">
+                <!-- Unit (full width) -->
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="${type}-unit-${id}">Unit *</label>
+                        <select id="${type}-unit-${id}" name="unit_id" required class="unit-select">
+                            <option value="">Select Unit</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Description (full width) -->
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="${type}-description-${id}">Description * </label>
+                        <textarea id="${type}-description-${id}" name="description" required>${cells[1].innerText}</textarea>
+                    </div>
+                </div>
+
+                <!-- Category and Issue on same row -->
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-category-${id}">Category</label>
+                        <select id="${type}-category-${id}" name="category_id" onchange="loadIssueItemsForEdit(this.value, ${id})">
+                            <option value="">Select Category</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" ${categoryName === "{{ category.name }}" ? 'selected' : ''}>{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="issue-items-container-${id}" class="form-group" style="flex: 1; display: block;">
+                        <label for="${type}-issue-item-${id}">Issue</label>
+                        <select id="${type}-issue-item-${id}" name="issue_item_id" onchange="handleIssueItemChangeForEdit(this.value, ${id})">
+                            <option value="">Select Issue</option>
+                            <option value="custom">+ Add Custom Issue</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Custom issue container -->
+                <div id="custom-issue-container-${id}" style="display: none; margin-bottom: 15px;">
+                    <label for="${type}-custom-issue-${id}">Custom Issue</label>
+                    <input type="text" id="${type}-custom-issue-${id}" name="custom_issue" placeholder="Enter custom issue" value="">
+                </div>
+
+                <!-- Reported By, Priority, Status, Type on same row -->
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-reported-by-${id}">Reported By</label>
+                        <select id="${type}-reported-by-${id}" name="reported_by_id">
+                            <option value="">Select Reporter</option>
+                            {% for reporter in reported_by_options %}
+                            <option value="{{ reporter.id }}">{{ reporter.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-priority-${id}">Priority</label>
+                        <select id="${type}-priority-${id}" name="priority_id">
+                            <option value="">Select Priority</option>
+                            {% for priority in priorities %}
+                            <option value="{{ priority.id }}" ${cells[6].innerText.trim() === "{{ priority.name }}" ? 'selected' : ''}>{{ priority.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-status-${id}">Status</label>
+                        <select id="${type}-status-${id}" name="status_id">
+                            <option value="">Select Status</option>
+                            {% for status in statuses %}
+                            {% if status.name not in ['In Progress', 'Rejected'] %}
+                            <option value="{{ status.id }}" ${cells[7].innerText.trim() === "{{ status.name }}" ? 'selected' : ''}>{{ status.name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-type-${id}">Type</label>
+                        <select id="${type}-type-${id}" name="type_id">
+                            <option value="">Select Type</option>
+                            {% for type in types %}
+                            <option value="{{ type.id }}">{{ type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Solution (full width) -->
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="${type}-solution-${id}">Solution</label>
+                        <textarea id="${type}-solution-${id}" name="solution">${cells[9].innerText || ''}</textarea>
+                    </div>
+                </div>
+
+                <!-- Guest Name, Cost, Assigned To on same row -->
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-guest-name-${id}">Guest Name</label>
+                        <input type="text" id="${type}-guest-name-${id}" name="guest_name" value="${cells[10].innerText || ''}">
+                    </div>
+
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-cost-${id}">Cost</label>
+                        <input type="number" id="${type}-cost-${id}" name="cost" step="0.01" min="0" value="${cells[11].innerText !== 'None' ? cells[11].innerText : ''}">
+                    </div>
+
+                    <div class="form-group" style="flex: 1;">
+                        <label for="${type}-assigned-to-${id}">Assigned To</label>
+                        <input type="text" id="${type}-assigned-to-${id}" name="assigned_to" value="${cells[12].innerText || ''}">
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="submit">Update</button>
+                    <button type="button" onclick="closeUpdateForm('${formId}')">Cancel</button>
+                </div>
+            </form>
+        </td></tr>`;
+
+        // Insert the form after the row
+        row.insertAdjacentHTML('afterend', formHTML);
+
+        // Set up form submission event
+        const updateForm = document.querySelector(`#${formId} form`);
+        updateForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formId = this.getAttribute('data-form-id');
+            this.action = `${updateIssueUrl}${formId}`;
+            this.submit();
+        });
+
+        // Now we need to populate the unit dropdown and select the correct unit
+        const unitSelect = document.getElementById(`${type}-unit-${id}`);
+        const currentUnitName = unitName.trim();
+
+        // Load units and select the current one
+        fetch("{{ url_for('units.get_units') }}")
+            .then(response => response.json())
+            .then(units => {
+                units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = unit.unit_number;
+                    if (unit.unit_number === currentUnitName) {
+                        option.selected = true;
+                    }
+                    unitSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading units:', error));
+
+        // Load the reported by, priority, status, and type values via API call
+        fetch(`${getIssueApiUrl}${id}`)
+            .then(response => response.json())
+            .then(issueData => {
+                // Set the reported by dropdown
+                if (issueData.reported_by_id) {
+                    const reportedBySelect = document.getElementById(`${type}-reported-by-${id}`);
+                    for (let i = 0; i < reportedBySelect.options.length; i++) {
+                        if (reportedBySelect.options[i].value == issueData.reported_by_id) {
+                            reportedBySelect.options[i].selected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Set the priority dropdown
+                if (issueData.priority_id) {
+                    const prioritySelect = document.getElementById(`${type}-priority-${id}`);
+                    for (let i = 0; i < prioritySelect.options.length; i++) {
+                        if (prioritySelect.options[i].value == issueData.priority_id) {
+                            prioritySelect.options[i].selected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Set the status dropdown
+                if (issueData.status_id) {
+                    const statusSelect = document.getElementById(`${type}-status-${id}`);
+                    for (let i = 0; i < statusSelect.options.length; i++) {
+                        if (statusSelect.options[i].value == issueData.status_id) {
+                            statusSelect.options[i].selected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Set the type dropdown
+                if (issueData.type_id) {
+                    const typeSelect = document.getElementById(`${type}-type-${id}`);
+                    for (let i = 0; i < typeSelect.options.length; i++) {
+                        if (typeSelect.options[i].value == issueData.type_id) {
+                            typeSelect.options[i].selected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Set the category and load issue items
+                if (issueData.category_id) {
+                    const categorySelect = document.getElementById(`${type}-category-${id}`);
+                    for (let i = 0; i < categorySelect.options.length; i++) {
+                        if (categorySelect.options[i].value == issueData.category_id) {
+                            categorySelect.options[i].selected = true;
+
+                            // Now load the issue items for this category, and select the current one
+                            loadIssueItemsForEdit(issueData.category_id, id, issueData.issue_item_id, issueItemName);
+                            break;
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Error loading issue data:', error));
+    }
+
+    function closeUpdateForm(formId) {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.remove();
+        }
+    }
+
+    // Update results counter
+    function updateFilterResultsCounter() {
+        const totalRows = document.querySelectorAll('#issue-table tbody tr').length;
+        const hiddenRows = document.querySelectorAll('#issue-table tbody tr[style*="display: none"]').length;
+        const visibleRows = totalRows - hiddenRows;
+
+        document.getElementById('visible-rows-count').textContent = visibleRows;
+    }
+
+    // Search Function
+    function searchTable(type) {
+        const input = document.getElementById(`${type}-search`);
+        const filter = input.value.toLowerCase().trim();
+        const table = document.getElementById(`${type}-table`);
+        const rows = table.getElementsByTagName('tr');
+        const noResults = document.getElementById(`${type}-no-results`);
+
+        let found = false;
+
+        // Skip header row (i=0)
+        for (let i = 1; i < rows.length; i++) {
+            let row = rows[i];
+            // Skip update form rows
+            if (row.id.includes('update-form')) continue;
+
+            let txtValue = row.textContent || row.innerText;
+
+            // Always show all rows if search is empty
+            if (filter === '') {
+                row.style.display = "";
+                found = true;
+                continue;
+            }
+
+            if (txtValue.toLowerCase().includes(filter)) {
+                row.style.display = "";
+                found = true;
+            } else {
+                row.style.display = "none";
+            }
+        }
+
+        // Show or hide no results message
+        if (found) {
+            noResults.style.display = "none";
+        } else {
+            noResults.style.display = "block";
+        }
+
+        // Update counter
+        updateFilterResultsCounter();
+    }
+
+    function resetSearch(type) {
+        const input = document.getElementById(`${type}-search`);
+        input.value = '';
+
+        const table = document.getElementById(`${type}-table`);
+        const rows = table.getElementsByTagName('tr');
+        const noResults = document.getElementById(`${type}-no-results`);
+
+        // Skip header row (i=0)
+        for (let i = 1; i < rows.length; i++) {
+            let row = rows[i];
+            // Skip update form rows
+            if (row.id.includes('update-form')) continue;
+            row.style.display = "";
+        }
+
+        noResults.style.display = "none";
+
+        // Reset sorting indicators
+        const headers = table.getElementsByTagName('th');
+        for (let i = 0; i < headers.length; i++) {
+            headers[i].classList.remove('sorted-asc', 'sorted-desc');
+        }
+
+        // Update counter to show all rows again
+        document.getElementById('visible-rows-count').textContent = document.querySelectorAll('#issue-table tbody tr').length;
+    }
+
+    // Sort Function
+    function sortTable(type, columnIndex) {
+        const table = document.getElementById(`${type}-table`);
+        const header = table.getElementsByTagName('th')[columnIndex];
+        const headers = table.getElementsByTagName('th');
+        let switching = true;
+        let rows, i, x, y, shouldSwitch, dir = "asc";
+        let switchcount = 0;
+
+        // First, remove all sorting indicators
+        for (i = 0; i < headers.length; i++) {
+            headers[i].classList.remove('sorted-asc', 'sorted-desc');
+        }
+
+        // Check if the same header was clicked - if so, reverse the sorting direction
+        if (header.classList.contains('sorted-asc')) {
+            dir = "desc";
+            header.classList.remove('sorted-asc');
+            header.classList.add('sorted-desc');
+        } else if (header.classList.contains('sorted-desc')) {
+            dir = "asc";
+            header.classList.remove('sorted-desc');
+            header.classList.add('sorted-asc');
+        } else {
+            // First time sorting this column
+            header.classList.add('sorted-asc');
+        }
+
+        while (switching) {
+            switching = false;
+            rows = table.rows;
+
+            // Skip update form rows and header row
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+
+                // Skip update form rows
+                if (rows[i].id.includes('update-form') || rows[i+1].id.includes('update-form')) continue;
+
+                x = rows[i].getElementsByTagName("td")[columnIndex];
+                y = rows[i + 1].getElementsByTagName("td")[columnIndex];
+
+                if (!x || !y) continue;
+
+                // Check if comparing date column
+                const isDateColumn = columnIndex === 4;
+
+                let compareX = x.textContent.toLowerCase();
+                let compareY = y.textContent.toLowerCase();
+
+                // If date column, convert to comparable format
+                if (isDateColumn && compareX && compareY) {
+                    // Convert date strings to date objects
+                    let dateX = parseDate(compareX);
+                    let dateY = parseDate(compareY);
+
+                    if (dir === "asc") {
+                        shouldSwitch = dateX > dateY;
+                    } else {
+                        shouldSwitch = dateX < dateY;
+                    }
+                } else {
+                    // Regular string comparison
+                    if (dir === "asc") {
+                        shouldSwitch = compareX > compareY;
+                    } else {
+                        shouldSwitch = compareX < compareY;
+                    }
+                }
+
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                }
+            }
+
+            // If no switching has been done, toggle direction and run again
+            if (switchcount === 0 && dir === "asc") {
+                dir = "desc";
+                switching = true;
+            }
+        }
+    }
+
+    // Helper function to parse date strings
+    function parseDate(dateStr) {
+        // Example format: "Mar 23, 2025, 05:59 PM"
+        try {
+            const parts = dateStr.split(',');
+            const datePart = parts[0].trim(); // "Mar 23"
+            const yearPart = parts[1].trim(); // "2025"
+            const timePart = parts[2].trim(); // "05:59 PM"
+
+            const monthDay = datePart.split(' ');
+            const month = getMonthNumber(monthDay[0]);
+            const day = parseInt(monthDay[1]);
+            const year = parseInt(yearPart);
+
+            const timeComponents = timePart.split(' ');
+            const timeValues = timeComponents[0].split(':');
+            let hours = parseInt(timeValues[0]);
+            const minutes = parseInt(timeValues[1]);
+
+            // Convert to 24-hour format if PM
+            if (timeComponents[1] === "PM" && hours < 12) {
+                hours += 12;
+            }
+            // Convert 12 AM to 0 hours
+            if (timeComponents[1] === "AM" && hours === 12) {
+                hours = 0;
+            }
+
+            return new Date(year, month, day, hours, minutes);
+        } catch (e) {
+            // If date parsing fails, return a minimal date
+            return new Date(0);
+        }
+    }
+
+    // Helper function to convert month name to number
+    function getMonthNumber(monthName) {
+        const months = {
+            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        };
+        return months[monthName] || 0;
+    }
+
+    // Add real-time search functionality that updates as you type
+    document.getElementById('issue-search')?.addEventListener('input', function() {
+        searchTable('issue');
+    });
+
+    // Add backup click handler for the Add Issue button
+    document.addEventListener('DOMContentLoaded', function() {
+        const addBtn = document.querySelector('.add-btn');
+        if (addBtn) {
+            addBtn.addEventListener('click', function() {
+                toggleForm('issue-form');
+            });
+        }
+    });
+
+    // Advanced filtering functionality
+    document.getElementById('apply-filters-btn').addEventListener('click', function() {
+        applyAdvancedFilters();
+    });
+
+    function applyAdvancedFilters() {
+        const dateAddedFilter = document.getElementById('filter-date-added').value;
+        const unitFilter = document.getElementById('filter-unit').value.toLowerCase();
+        const categoryFilter = document.getElementById('filter-category').value.toLowerCase();
+        const issueFilter = document.getElementById('filter-issue').value.toLowerCase();
+        const reportedByFilter = document.getElementById('filter-reported-by').value.toLowerCase();
+        const priorityFilter = document.getElementById('filter-priority').value.toLowerCase();
+        const statusFilter = document.getElementById('filter-status').value.toLowerCase();
+        const typeFilter = document.getElementById('filter-type').value.toLowerCase();
+
+        const table = document.getElementById('issue-table');
+        const rows = table.getElementsByTagName('tr');
+        const noResults = document.getElementById('issue-no-results');
+
+        let found = false;
+
+        // Get current date for date filtering
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const last7Days = new Date(today);
+        last7Days.setDate(last7Days.getDate() - 7);
+
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const thisYearStart = new Date(now.getFullYear(), 0, 1);
+
+        const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+        const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+
+        // Skip header row (i=0)
+        for (let i = 1; i < rows.length; i++) {
+            let row = rows[i];
+            // Skip update form rows
+            if (row.id.includes('update-form')) continue;
+
+            const cells = row.getElementsByTagName('td');
+            if (cells.length === 0) continue;
+
+            const unitValue = cells[0].textContent.toLowerCase();
+            const descriptionValue = cells[1].textContent.toLowerCase();
+            const categoryValue = cells[2].textContent.toLowerCase();
+            const issueValue = cells[3].textContent.toLowerCase();
+            const dateAddedValue = cells[4].textContent.trim();
+            const reportedByValue = cells[5].textContent.toLowerCase();
+            const priorityValue = cells[6].textContent.toLowerCase();
+            const statusValue = cells[7].textContent.toLowerCase();
+            const typeValue = cells[8].textContent.toLowerCase();
+
+            // Parse the date (format is like "Apr 27, 2025, 05:59 PM")
+            const dateAdded = parseDate(dateAddedValue);
+
+            // Check if the date matches the filter
+            let matchesDate = true;
+
+            if (dateAddedFilter) {
+                switch (dateAddedFilter) {
+                    case 'today':
+                        matchesDate = dateAdded >= today;
+                        break;
+                    case 'yesterday':
+                        matchesDate = dateAdded >= yesterday && dateAdded < today;
+                        break;
+                    case 'last7days':
+                        matchesDate = dateAdded >= last7Days;
+                        break;
+                    case 'thismonth':
+                        matchesDate = dateAdded >= thisMonthStart;
+                        break;
+                    case 'lastmonth':
+                        matchesDate = dateAdded >= lastMonthStart && dateAdded <= lastMonthEnd;
+                        break;
+                    case 'thisyear':
+                        matchesDate = dateAdded >= thisYearStart;
+                        break;
+                    case 'lastyear':
+                        matchesDate = dateAdded >= lastYearStart && dateAdded <= lastYearEnd;
+                        break;
+                    default:
+                        matchesDate = true;
+                }
+            }
+
+            // Check if the row matches all filter criteria
+            const matchesUnit = unitFilter === '' || unitValue.includes(unitFilter);
+            const matchesCategory = categoryFilter === '' || categoryValue.includes(categoryFilter);
+            const matchesIssue = issueFilter === '' || issueValue.includes(issueFilter);
+            const matchesReportedBy = reportedByFilter === '' || reportedByValue.includes(reportedByFilter);
+            const matchesPriority = priorityFilter === '' || priorityValue.includes(priorityFilter);
+            const matchesStatus = statusFilter === '' || statusValue.includes(statusFilter);
+            const matchesType = typeFilter === '' || typeValue.includes(typeFilter);
+
+            // Show row only if it matches all selected filters
+            if (matchesDate && matchesUnit && matchesCategory && matchesIssue && matchesReportedBy &&
+                matchesPriority && matchesStatus && matchesType) {
+                row.style.display = "";
+                found = true;
+            } else {
+                row.style.display = "none";
+            }
+        }
+
+        // Show or hide no results message
+        if (found) {
+            noResults.style.display = "none";
+        } else {
+            noResults.style.display = "block";
+        }
+
+        // Update counter
+        updateFilterResultsCounter();
+    }
+
+    // Update the reset function to clear the date added filter
+    document.querySelector('.reset-btn').addEventListener('click', function() {
+        // Reset the advanced filter values
+        document.getElementById('filter-date-added').value = '';
+        document.getElementById('filter-unit').value = '';
+        document.getElementById('filter-category').value = '';
+        document.getElementById('filter-issue').value = '';
+        document.getElementById('filter-reported-by').value = '';
+        document.getElementById('filter-priority').value = '';
+        document.getElementById('filter-status').value = '';
+        document.getElementById('filter-type').value = '';
+
+        // Call the original reset function
+        resetSearch('issue');
+    });
+
+    // Filter table based on card click - UPDATED to only handle remaining cards
+    function filterTableByCard(cardClass) {
+        // Reset all filter inputs
+        document.getElementById('filter-date-added').value = '';
+        document.getElementById('filter-unit').value = '';
+        document.getElementById('filter-category').value = '';
+        document.getElementById('filter-issue').value = '';
+        document.getElementById('filter-reported-by').value = '';
+        document.getElementById('filter-priority').value = '';
+        document.getElementById('filter-status').value = '';
+        document.getElementById('filter-type').value = '';
+
+        // Reset search box
+        document.getElementById('issue-search').value = '';
+
+        // Reset the table completely
+        resetSearch('issue');
+
+        // Reset the form display (in case an update form is open)
+        document.querySelectorAll('tr[id^="issue-update-form-"]').forEach(form => {
+            form.remove();
+        });
+
+        // Filter based on card type - UPDATED to only handle remaining cards
+        switch(cardClass) {
+            case 'card-pending':
+                // Filter for pending status
+                document.getElementById('filter-status').value = 'Pending';
+                break;
+
+            case 'card-today':
+                // Filter for issues added today
+                document.getElementById('filter-date-added').value = 'today';
+                break;
+
+            case 'card-cost':
+                // Filter for issues with costs this month
+                document.getElementById('filter-date-added').value = 'thismonth';
+                // Sort by cost (Column 11)
+                sortTable('issue', 11);
+                // We need to click twice to get descending order
+                sortTable('issue', 11);
+                break;
+        }
+
+        // Apply the filters
+        applyAdvancedFilters();
+
+        // Scroll to the table
+        document.querySelector('.table-responsive').scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+
+    // Add click event to analytics cards
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all analytics cards
+        const analyticsCards = document.querySelectorAll('.analytics-card');
+
+        // Add click event to each card
+        analyticsCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // Determine which card was clicked
+                const cardClass = Array.from(this.classList)
+                    .find(cls => cls.startsWith('card-'));
+
+                if (cardClass) {
+                    filterTableByCard(cardClass);
+                }
+            });
+
+            // Add visual indicator that cards are clickable
+            card.style.cursor = 'pointer';
+            card.title = 'Click to filter table';
+        });
+
+        // Sort by date (newest first) on page load
+        const table = document.getElementById('issue-table');
+        const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+        // Skip rows that are part of update forms
+        const dataRows = rows.filter(row => !row.id.includes('update-form'));
+
+        // Sort by date (column 4)
+        dataRows.sort((a, b) => {
+            const dateA = parseDate(a.cells[4].textContent.trim());
+            const dateB = parseDate(b.cells[4].textContent.trim());
+
+            // Descending order (newest first)
+            return dateB - dateA;
+        });
+
+        // Re-append rows in sorted order
+        const tbody = table.querySelector('tbody');
+        dataRows.forEach(row => tbody.appendChild(row));
+
+        // Update sorting indicator
+        const dateHeader = document.querySelector('#issue-table th:nth-child(5)');
+        if (dateHeader) {
+            // Clear all sorting indicators
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+
+            // Add descending indicator to date column
+            dateHeader.classList.add('sorted-desc');
+        }
+
+        // Check for new or updated issue ID in URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const newIssueId = urlParams.get('new_issue_id');
+        const updatedIssueId = urlParams.get('updated_issue_id');
+
+        // Get the page parameter if it exists
+        const pageParam = urlParams.get('page');
+        if (pageParam && !isNaN(parseInt(pageParam))) {
+            // Set the current page based on the URL parameter
+            currentPage = parseInt(pageParam);
+        }
+
+        // Handle either a new or updated issue
+        const issueId = newIssueId || updatedIssueId;
+        const isNew = !!newIssueId;
+
+        if (issueId) {
+            console.log("Found issue to highlight: " + issueId + ", isNew: " + isNew);
+
+            // Find the issue row - add a small delay to ensure DOM is fully ready
+            setTimeout(() => {
+                const issueRow = document.getElementById(`issue-row-${issueId}`);
+                console.log("Issue row found:", issueRow);
+
+                if (issueRow) {
+                    // Highlight issue with light green background
+                    issueRow.style.backgroundColor = '#d4edda';
+
+                    if (isNew) {
+                        // For new issues, move the row to the top of the table
+                        const table = document.getElementById('issue-table');
+                        if (table) {
+                            const tbody = table.querySelector('tbody');
+                            if (tbody) {
+                                const firstRow = tbody.querySelector('tr:first-child');
+
+                                if (firstRow && firstRow !== issueRow) {
+                                    console.log("Moving row to top");
+                                    // Insert the issue row before the first row
+                                    tbody.insertBefore(issueRow, firstRow);
+                                }
+                            }
+                        }
+
+                        // For new issues, reset to first page
+                        currentPage = 1;
+                    }
+                    // For updated issues, we don't change the page
+
+                    // Update the pagination display
+                    if (typeof updatePageDisplay === 'function') {
+                        // Re-filter rows
+                        filteredRows = Array.from(document.querySelectorAll('#issue-table tbody tr'))
+                            .filter(row => !row.id.includes('update-form'));
+
+                        updatePageDisplay();
+
+                        // After pagination is updated, find which page contains the updated row
+                        if (updatedIssueId) {
+                            // Since we've kept the current page, we should scroll to the updated row
+                            // if it's visible on the current page
+                            const isRowVisible = issueRow.style.display !== 'none';
+                            if (isRowVisible) {
+                                // Scroll to make it visible
+                                issueRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            } else {
+                                // If the row isn't visible on the current page,
+                                // we need to find which page it's on and go there
+                                const rowIndex = filteredRows.indexOf(issueRow);
+                                if (rowIndex !== -1) {
+                                    const targetPage = Math.floor(rowIndex / rowsPerPage) + 1;
+                                    currentPage = targetPage;
+                                    updatePageDisplay();
+
+                                    // Now scroll to it
+                                    setTimeout(() => {
+                                        issueRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 100);
+                                }
+                            }
+                        } else if (newIssueId) {
+                            // For new issues, we're already on page 1 and the row is at the top
+                            issueRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+
+                    // Gradually fade out the background color after 5 seconds
+                    setTimeout(function() {
+                        issueRow.style.transition = 'background-color 2s';
+                        issueRow.style.backgroundColor = '';
+                    }, 5000);
+                } else {
+                    console.log("Issue row not found");
+                }
+            }, 100); // Small delay to ensure DOM is ready
+        }
+
+        // Initialize pagination
+        initPagination();
+    });
+
+    // Pagination functionality
+    let currentPage = 1;
+    let rowsPerPage = 20;
+    let filteredRows = [];
+
+    function initPagination() {
+        // Get all rows in the table body
+        const allRows = Array.from(document.querySelectorAll('#issue-table tbody tr'))
+            .filter(row => !row.id.includes('update-form'));
+
+        // Initialize with all rows
+        filteredRows = allRows;
+
+        // Calculate total pages
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+        document.getElementById('pagination-total-pages').textContent = totalPages;
+        document.getElementById('pagination-total').textContent = filteredRows.length;
+
+        // Show only the first page
+        updatePageDisplay();
+    }
+
+    function updatePageDisplay() {
+        // Update pagination info
+        const start = (currentPage - 1) * rowsPerPage + 1;
+        const end = Math.min(currentPage * rowsPerPage, filteredRows.length);
+
+        document.getElementById('pagination-start').textContent = filteredRows.length > 0 ? start : 0;
+        document.getElementById('pagination-end').textContent = end;
+        document.getElementById('pagination-current-page').textContent = currentPage;
+
+        // Enable/disable prev/next buttons
+        document.getElementById('prev-page').disabled = currentPage === 1;
+        document.getElementById('next-page').disabled = currentPage >= Math.ceil(filteredRows.length / rowsPerPage);
+
+        // Show/hide rows based on current page
+        filteredRows.forEach((row, index) => {
+            if (index >= (currentPage - 1) * rowsPerPage && index < currentPage * rowsPerPage) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Update filter results counter if it exists
+        if (document.getElementById('visible-rows-count')) {
+            document.getElementById('visible-rows-count').textContent =
+                Math.min(rowsPerPage, filteredRows.length - (currentPage - 1) * rowsPerPage);
+        }
+    }
+
+    // Previous page button
+    document.getElementById('prev-page').addEventListener('click', function() {
+        if (currentPage > 1) {
+            currentPage--;
+            updatePageDisplay();
+        }
+    });
+
+    // Next page button
+    document.getElementById('next-page').addEventListener('click', function() {
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            updatePageDisplay();
+        }
+    });
+
+    // Modify existing filter functions to work with pagination
+
+    // Update the original function for applyAdvancedFilters
+    const originalApplyAdvancedFilters = applyAdvancedFilters;
+    applyAdvancedFilters = function() {
+        // Reset to first page when filtering
+        currentPage = 1;
+
+        // Apply original filters first
+        originalApplyAdvancedFilters();
+
+        // Get the filtered rows
+        filteredRows = Array.from(document.querySelectorAll('#issue-table tbody tr'))
+            .filter(row => !row.id.includes('update-form') && row.style.display !== 'none');
+
+        // Update pagination based on filtered results
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+        document.getElementById('pagination-total-pages').textContent = totalPages;
+        document.getElementById('pagination-total').textContent = filteredRows.length;
+
+        // Re-apply pagination
+        updatePageDisplay();
+    };
+
+    // Update the original search function
+    const originalSearchTable = searchTable;
+    searchTable = function(type) {
+        // Reset to first page when searching
+        currentPage = 1;
+
+        // Apply original search first
+        originalSearchTable(type);
+
+        // Get the filtered rows
+        filteredRows = Array.from(document.querySelectorAll('#issue-table tbody tr'))
+            .filter(row => !row.id.includes('update-form') && row.style.display !== 'none');
+
+        // Update pagination based on filtered results
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+        document.getElementById('pagination-total-pages').textContent = totalPages;
+        document.getElementById('pagination-total').textContent = filteredRows.length;
+
+        // Re-apply pagination
+        updatePageDisplay();
+    };
+
+    // Update the original reset function
+    const originalResetSearch = resetSearch;
+    resetSearch = function(type) {
+        // Reset to first page
+        currentPage = 1;
+
+        // Apply original reset first
+        originalResetSearch(type);
+
+        // Get all rows
+        filteredRows = Array.from(document.querySelectorAll('#issue-table tbody tr'))
+            .filter(row => !row.id.includes('update-form'));
+
+        // Update pagination for all rows
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+        document.getElementById('pagination-total-pages').textContent = totalPages;
+        document.getElementById('pagination-total').textContent = filteredRows.length;
+
+        // Re-apply pagination
+        updatePageDisplay();
+    };
+</script>
+
+{% endwith %}
+{% endblock %}

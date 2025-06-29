@@ -1,0 +1,2171 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PropertyHub{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .dashboard-container {
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden; /* Prevent horizontal overflow */
+    }
+
+    .user-welcome {
+        font-size: 13px;
+        color: #666;
+        text-align: right;
+        margin: 0 5px 20px 0;
+    }
+
+    .user-welcome span {
+        font-weight: bold;
+        color: #ee4d2d;
+    }
+
+    /* Updated grid layout for left-right arrangement with proper containment */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Left column for Booking and Earnings sections */
+    .dashboard-left {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        min-width: 0; /* Allow shrinking */
+    }
+
+    /* Right column for Issues section */
+    .dashboard-right {
+        display: flex;
+        flex-direction: column;
+        min-width: 0; /* Allow shrinking */
+    }
+
+    .dashboard-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        padding: 24px;
+        width: 100%;
+        box-sizing: border-box;
+        min-width: 0; /* Allow shrinking */
+        overflow: visible; /* Changed from hidden to visible */
+        min-height: fit-content; /* Allow sections to grow with content */
+    }
+
+    .dashboard-section h2 {
+        font-size: 28px;
+        font-weight: bold;
+        margin: 0 0 20px 0;
+        color: #333;
+    }
+
+    /* Booking Section */
+    .booking-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .metric-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+        min-width: 0; /* Allow shrinking */
+        box-sizing: border-box;
+    }
+
+    .metric-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    .metric-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .occupancy-value { color: #4CAF50; }
+    .revenue-value { color: #FF5722; }
+    .checkin-value { color: #2196F3; }
+    .checkout-value { color: #FF9800; }
+
+    /* Issue Section */
+    .issue-content {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        width: 100%;
+        box-sizing: border-box;
+        flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    }
+
+    .issue-charts {
+        display: flex;
+        gap: 16px;
+        flex: 1;
+        min-width: 0; /* Allow shrinking */
+        flex-wrap: nowrap; /* Keep charts side by side */
+    }
+
+    .chart-container {
+        flex: 1;
+        min-height: 180px; /* Reduced from 250px */
+        max-height: 200px; /* Add max height to keep them compact */
+        position: relative;
+        min-width: 150px; /* Reduced from 200px */
+        max-width: 100%;
+    }
+
+    .chart-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #666;
+        text-align: center;
+    }
+
+    .legend {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+    }
+
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    /* Top Issue Types */
+    .top-issues {
+        min-width: 200px;
+        max-width: 250px;
+        flex-shrink: 0;
+    }
+
+    .top-issues h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 12px 0;
+        color: #666;
+    }
+
+    .issue-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 12px;
+    }
+
+    .issue-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    /* Earnings & Expenses Section */
+    .earnings-section {
+        min-height: 700px; /* Increased height for earnings section specifically */
+        overflow: visible; /* Ensure content can expand */
+    }
+
+    .earnings-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start; /* Changed from center to flex-start */
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .earnings-header > div:first-child {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .earnings-filters {
+        flex-shrink: 0;
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .earnings-subtitle {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+    }
+
+    .earnings-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        width: 100%;
+        box-sizing: border-box;
+        align-items: start;
+    }
+
+    /* PL Statement - Left side with chart */
+    .pl-statement {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: visible; /* Keep visible to show legend */
+        display: flex;
+        flex-direction: column;
+        min-height: 620px; /* Increased height for pl-statement specifically */
+        height: auto; /* Allow dynamic height expansion */
+    }
+
+    .pl-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Chart container within PL statement */
+    .pl-statement .chart-container {
+        flex: 1;
+        min-height: 200px;
+        max-height: 250px;
+        position: relative;
+        margin-bottom: 20px; /* Add space for legend below */
+    }
+
+    /* Legend container styling */
+    #expense-chart-legend {
+        margin-top: 15px;
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+        box-sizing: border-box;
+        width: 100%;
+        flex-shrink: 0; /* Prevent legend from shrinking */
+    }
+
+    .pl-metric {
+        text-align: center;
+    }
+
+    .pl-value {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    .pl-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 2px;
+    }
+
+    .pl-change {
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .pl-change.positive { color: #4CAF50; }
+    .pl-change.negative { color: #F44336; }
+
+    .revenue-color { color: #2196F3 !important; } /* Blue for Total Revenue */
+    .expense-color { color: #FF5722 !important; } /* Red for Total Expenses */
+    .income-color { color: #4CAF50 !important; } /* Green for Net Income */
+
+    /* Update table row colors to match */
+    .revenue-row {
+        background-color: #e3f2fd !important; /* Light blue background */
+        border-left: 4px solid #2196F3 !important;
+    }
+
+    .expenses-row {
+        background-color: #ffebee !important; /* Light red background */
+        border-left: 4px solid #FF5722 !important;
+    }
+
+    .income-row {
+        background-color: #e8f5e9 !important; /* Light green background */
+        border-left: 4px solid #4CAF50 !important;
+    }
+
+    /* Expense Summary Table - Right side */
+    .expense-summary {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+        align-self: start; /* Align to top */
+    }
+
+    .expense-summary h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+        padding: 16px 16px 0 16px;
+    }
+
+    .expense-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed; /* Prevent table from expanding beyond container */
+    }
+
+    .expense-table th,
+    .expense-table td {
+        padding: 8px 12px; /* Reduced padding */
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 12px;
+        word-wrap: break-word;
+        overflow: hidden;
+    }
+
+    .expense-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #666;
+        text-align: center; /* Center align all table headers */
+    }
+
+    .expense-table td:nth-child(2),
+    .expense-table td:nth-child(3) {
+        text-align: right;
+    }
+
+    .expense-table tfoot td {
+        font-weight: 600;
+        border-top: 2px solid #ddd;
+        background: #f8f9fa;
+    }
+
+    /* Heatmap */
+    .heatmap-container {
+        overflow-x: auto;
+        margin-top: 24px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .heatmap-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        text-align: center;
+    }
+
+    .heatmap {
+        border-collapse: collapse;
+        font-size: 10px;
+        margin: 0 auto;
+        min-width: 100%;
+        table-layout: auto;
+    }
+
+    .heatmap th,
+    .heatmap td {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        text-align: center;
+        min-width: 60px;
+    }
+
+    .heatmap th {
+        background: #f5f5f5;
+        font-weight: 600;
+    }
+
+    .heatmap .unit-label {
+        background: #f0f0f0;
+        font-weight: 600;
+        text-align: left;
+        position: sticky;
+        left: 0;
+        z-index: 1;
+    }
+
+    /* Heatmap colors */
+    .heat-0 { background-color: #f0f0f0; }
+    .heat-1 { background-color: #d4edda; }
+    .heat-2 { background-color: #c3e6cb; }
+    .heat-3 { background-color: #b1dfbb; }
+    .heat-4 { background-color: #a0d8ab; }
+    .heat-5 { background-color: #8fd19e; }
+    .heat-6 { background-color: #7dca91; }
+    .heat-7 { background-color: #6cc384; }
+    .heat-8 { background-color: #5abc77; }
+    .heat-9 { background-color: #48b56a; }
+    .heat-10-plus { background-color: #dc3545; color: white; }
+
+    /* Filter dropdowns to prevent overflow */
+    .earnings-filter select,
+    .filter-group select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: white;
+        font-size: 14px;
+        min-width: 120px;
+        max-width: 200px; /* Prevent dropdowns from being too wide */
+        box-sizing: border-box;
+    }
+
+    .issue-filters {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    /* Pending Issues Section Spacing */
+    .pending-issues-section {
+        margin-top: 50px !important; /* More space between charts and pending issues */
+    }
+
+    /* Pending Issues Table Styles */
+    .pending-issues-table-wrapper {
+        overflow-x: auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .pending-issues-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        table-layout: fixed; /* Prevent table expansion */
+        font-size: 14px;
+    }
+
+    .pending-issues-table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .pending-issues-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .pending-issues-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .pending-issues-table th,
+    .pending-issues-table td {
+        padding: 12px 8px; /* Reduced padding */
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Set specific column widths for pending issues table */
+    .pending-issues-table th:nth-child(1),
+    .pending-issues-table td:nth-child(1) { width: 15%; } /* Unit */
+    .pending-issues-table th:nth-child(2),
+    .pending-issues-table td:nth-child(2) { width: 25%; } /* Issue */
+    .pending-issues-table th:nth-child(3),
+    .pending-issues-table td:nth-child(3) {
+        width: 45%;
+        white-space: normal; /* Allow description to wrap */
+    } /* Description */
+    .pending-issues-table th:nth-child(4),
+    .pending-issues-table td:nth-child(4) { width: 15%; } /* Date */
+
+    .pending-issues-table .unit-cell {
+        font-weight: 600;
+        color: #ee4d2d;
+        min-width: 80px;
+    }
+
+    .pending-issues-table .issue-cell {
+        font-weight: 500;
+        color: #333;
+        min-width: 120px;
+    }
+
+    .pending-issues-table .description-cell {
+        color: #666;
+        line-height: 1.4;
+        max-width: 300px;
+        word-wrap: break-word;
+    }
+
+    .pending-issues-table .date-cell {
+        color: #999;
+        font-size: 13px;
+        min-width: 100px;
+        white-space: nowrap;
+    }
+
+    /* Loading States */
+    .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+        color: #666;
+    }
+
+    .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #ee4d2d;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .expense-table .positive-value {
+        color: #4CAF50 !important; /* Green for positive values */
+        font-weight: bold;
+    }
+
+    .expense-table .negative-value {
+        color: #F44336 !important; /* Red for negative values */
+        font-weight: bold;
+    }
+
+    /* Enhanced styling for different row types */
+    .expense-table tr[style*="background-color: #e8f5e9"] {
+        border-left: 4px solid #4CAF50;
+    }
+
+    .expense-table tr[style*="background-color: #ffebee"] {
+        border-left: 4px solid #F44336;
+    }
+
+    .expense-table tr[style*="background-color: #e3f2fd"] {
+        border-left: 4px solid #2196F3;
+    }
+
+    /* Improve readability of indented expense items */
+    .expense-table td[style*="padding-left: 20px"] {
+        position: relative;
+    }
+
+    .expense-table td[style*="padding-left: 20px"]::before {
+        content: "•";
+        position: absolute;
+        left: 8px;
+        color: #666;
+    }
+
+    /* Additional fix for chart containers */
+    .chart-container canvas {
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: 180px !important; /* Add max height for charts */
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .dashboard-container {
+            padding: 15px;
+            max-width: 100%;
+        }
+
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .dashboard-left,
+        .dashboard-right {
+            gap: 20px;
+        }
+
+        .earnings-content {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .pl-metrics {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        }
+
+        .issue-content {
+            flex-direction: column;
+        }
+
+        .issue-charts {
+            width: 100%;
+            flex-direction: row; /* Keep side by side on tablets */
+            gap: 12px;
+        }
+
+        .chart-container {
+            min-height: 160px; /* Smaller on medium screens */
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 10px;
+        }
+
+        .booking-metrics {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .earnings-filters,
+        .issue-filters {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .earnings-filter,
+        .filter-group {
+            width: 100%;
+        }
+
+        .earnings-filter select,
+        .filter-group select {
+            width: 100%;
+            min-width: auto;
+        }
+
+        .dashboard-section {
+            padding: 16px;
+        }
+
+        .dashboard-section h2 {
+            font-size: 24px;
+        }
+
+        .issue-charts {
+            gap: 10px;
+            flex-direction: column; /* Stack vertically on mobile */
+        }
+
+        .chart-container {
+            min-width: auto;
+            min-height: 150px; /* Even smaller on mobile */
+        }
+
+        .pl-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .earnings-content {
+            grid-template-columns: 1fr;
+        }
+
+        .issue-charts {
+            flex-direction: column;
+        }
+
+        /* Responsive adjustments for pending issues table */
+        .pending-issues-table th,
+        .pending-issues-table td {
+            padding: 10px 8px;
+            font-size: 13px;
+        }
+
+        .pending-issues-table .description-cell {
+            max-width: 200px;
+        }
+
+        .pending-issues-section {
+            margin-top: 40px !important; /* More space on tablets */
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dashboard-container {
+            padding: 8px;
+        }
+
+        .booking-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-section {
+            padding: 12px;
+        }
+
+        .dashboard-section h2 {
+            font-size: 20px;
+        }
+
+        .legend {
+            justify-content: flex-start;
+            gap: 8px;
+        }
+
+        /* Stack pending issues table columns on very small screens */
+        .pending-issues-table th,
+        .pending-issues-table td {
+            padding: 8px 4px;
+            font-size: 11px;
+        }
+    }
+
+    /* Animation for loading spinner */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- User Welcome -->
+    <div class="user-welcome">
+        Welcome, <span>{{ current_user.name }}</span>
+    </div>
+
+    <!-- Dashboard Grid with Left-Right Layout -->
+    <div class="dashboard-grid">
+        <!-- Left Column: Booking and Earnings & Expenses -->
+        <div class="dashboard-left">
+            <!-- Booking Section -->
+            {% if current_user.has_permission('can_view_bookings') %}
+            <div class="dashboard-section">
+                <h2>Booking</h2>
+
+                <!-- Today's Metrics -->
+                <div class="booking-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value occupancy-value">{{ booking_stats.current_occupancy }}/{{ booking_stats.total_units }}</div>
+                        <div class="metric-label">Occupancy Today</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value revenue-value">{{ "%.2f"|format(booking_stats.revenue_today) }}</div>
+                        <div class="metric-label">Revenue Today</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value checkin-value">{{ booking_stats.checkins_today }}</div>
+                        <div class="metric-label">Check-Ins Today</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value checkout-value">{{ booking_stats.checkouts_today }}</div>
+                        <div class="metric-label">Check-Outs Today</div>
+                    </div>
+                </div>
+
+                <!-- Tomorrow's Metrics -->
+                <div class="booking-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value occupancy-value">{{ booking_stats.tomorrow_occupancy }}/{{ booking_stats.total_units }}</div>
+                        <div class="metric-label">Occupancy Tomorrow</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value revenue-value">{{ "%.2f"|format(booking_stats.revenue_tomorrow) }}</div>
+                        <div class="metric-label">Revenue Tomorrow</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value checkin-value">{{ booking_stats.checkins_tomorrow }}</div>
+                        <div class="metric-label">Check-Ins Tomorrow</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value checkout-value">{{ booking_stats.checkouts_tomorrow }}</div>
+                        <div class="metric-label">Check-Outs Tomorrow</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Earnings & Expenses Section -->
+            {% if current_user.has_permission('can_view_expenses') %}
+            <div class="dashboard-section earnings-section">
+                <div class="earnings-header">
+                    <div>
+                        <h2 style="margin: 0 0 5px 0;">Earnings & Expenses</h2>
+                        <p class="earnings-subtitle" id="earnings-subtitle">
+                            Monthly Profit & Loss Statement<br>
+                            <span id="earnings-period">{{ expense_stats.current_month|month_name }} {{ expense_stats.current_year }} | All Units</span>
+                        </p>
+                    </div>
+                    <div class="earnings-filters" style="display: flex; gap: 15px; align-items: flex-end;">
+                        <!-- Unit Filter -->
+                        <div class="earnings-filter">
+                            <label for="earnings-unit-filter" style="font-size: 12px; color: #666; margin-bottom: 4px; display: block;">Unit:</label>
+                            <select id="earnings-unit-filter" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background-color: white; font-size: 14px; min-width: 120px;">
+                                <option value="all">All Units</option>
+                                <!-- Units will be populated dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Date Range Filter -->
+                        <div class="earnings-filter">
+                            <label for="earnings-date-filter" style="font-size: 12px; color: #666; margin-bottom: 4px; display: block;">Date Range:</label>
+                            <select id="earnings-date-filter" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background-color: white; font-size: 14px; min-width: 140px;">
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="this-week">This Week</option>
+                                <option value="last-week">Last Week</option>
+                                <option value="this-month" selected>This Month</option>
+                                <option value="last-month">Last Month</option>
+                                <option value="this-year">This Year</option>
+                                <option value="last-year">Last Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="earnings-content">
+                    <!-- P&L Statement -->
+                    <div class="pl-statement">
+                        <div class="pl-metrics">
+                            <div class="pl-metric">
+                                <div class="pl-label">Total Revenue</div>
+                                <div class="pl-value revenue-color">RM{{ "%.0f"|format(expense_stats.revenue) }}</div>
+                                <div class="pl-change {{ 'positive' if expense_stats.revenue_change >= 0 else 'negative' }}">
+                                    {{ '+' if expense_stats.revenue_change >= 0 else '' }}{{ "%.1f"|format(expense_stats.revenue_change) }}% vs last month
+                                </div>
+                            </div>
+                            <div class="pl-metric">
+                                <div class="pl-label">Total Expenses</div>
+                                <div class="pl-value expense-color">RM{{ "%.0f"|format(expense_stats.total_expenses) }}</div>
+                                <div class="pl-change {{ 'negative' if expense_stats.expense_change >= 0 else 'positive' }}">
+                                    {{ '+' if expense_stats.expense_change >= 0 else '' }}{{ "%.1f"|format(expense_stats.expense_change) }}% vs last month
+                                </div>
+                            </div>
+                            <div class="pl-metric">
+                                <div class="pl-label">Net Income</div>
+                                <div class="pl-value income-color">RM{{ "%.2f"|format(expense_stats.net_income) }}</div>
+                                <div class="pl-change {{ 'positive' if expense_stats.income_change >= 0 else 'negative' }}">
+                                    {{ '+' if expense_stats.income_change >= 0 else '' }}{{ "%.1f"|format(expense_stats.income_change) }}% vs last month
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Expense Pie Chart -->
+                        <div class="chart-container">
+                            <canvas id="expenseChart" width="300" height="300"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Earnings & Expenses Summary Table -->
+                    <div class="expense-summary">
+                        <h3>Earnings & Expenses Summary</h3>
+                        <table class="expense-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>RM</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="earnings-expenses-summary-tbody">
+                                <!-- Revenue Section -->
+                                <tr class="revenue-row">
+                                    <td><strong>Revenue</strong></td>
+                                    <td id="table-revenue"><strong>{{ "%.2f"|format(expense_stats.revenue) }}</strong></td>
+                                    <td id="table-revenue-percent"><strong>100%</strong></td>
+                                </tr>
+
+                                <!-- Expenses Section -->
+                                <tr style="background-color: #f5f5f5; border-top: 2px solid #ddd;">
+                                    <td><strong>Expenses:</strong></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                {% for item in expense_stats.expense_breakdown %}
+                                <tr>
+                                    <td style="padding-left: 20px;">{{ item.category }}</td>
+                                    <td>{{ "%.2f"|format(item.amount) }}</td>
+                                    <td>{{ "%.1f"|format(item.percentage) }}%</td>
+                                </tr>
+                                {% endfor %}
+
+                                <!-- Total Expenses Row -->
+                                <tr class="expenses-row">
+                                    <td><strong>Total Expenses</strong></td>
+                                    <td id="table-total-expenses"><strong>{{ "%.2f"|format(expense_stats.total_expenses) }}</strong></td>
+                                    <td id="table-total-expenses-percent"><strong>{{ "%.1f"|format((expense_stats.total_expenses / expense_stats.revenue * 100) if expense_stats.revenue > 0 else 0) }}%</strong></td>
+                                </tr>
+
+                                <!-- Net Income Row -->
+                                <tr class="income-row">
+                                    <td><strong>Net Income</strong></td>
+                                    <td id="table-net-income" class="{{ 'positive-value' if expense_stats.net_income >= 0 else 'negative-value' }}">
+                                        <strong>{{ "%.2f"|format(expense_stats.net_income) }}</strong>
+                                    </td>
+                                    <td id="table-net-income-percent" class="{{ 'positive-value' if expense_stats.net_income >= 0 else 'negative-value' }}">
+                                        <strong>{{ "%.1f"|format((expense_stats.net_income / expense_stats.revenue * 100) if expense_stats.revenue > 0 else 0) }}%</strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Issues -->
+        <div class="dashboard-right">
+            {% if current_user.has_permission('can_view_issues') %}
+            <div class="dashboard-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h2 style="margin: 0;">Issue</h2>
+                    <div class="issue-filters" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                        <div class="filter-group">
+                            <label for="issue-unit-filter" style="font-size: 12px; color: #666; margin-bottom: 4px; display: block;">Unit:</label>
+                            <select id="issue-unit-filter" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background-color: white; font-size: 14px; min-width: 120px;">
+                                <option value="all">All Units</option>
+                                <!-- Units will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="issue-date-filter" style="font-size: 12px; color: #666; margin-bottom: 4px; display: block;">Date Range:</label>
+                            <select id="issue-date-filter" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background-color: white; font-size: 14px; min-width: 140px;">
+                                <option value="hour">Last 1 Hour</option>
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="this-week">This Week</option>
+                                <option value="last-week">Last Week</option>
+                                <option value="this-month" selected>This Month</option>
+                                <option value="last-month">Last Month</option>
+                                <option value="this-year">This Year</option>
+                                <option value="last-year">Last Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-content">
+                    <div class="issue-charts">
+                        <!-- Issues by Status Chart -->
+                        <div class="chart-container">
+                            <div class="chart-title">Issues by Status</div>
+                            <canvas id="statusChart" width="200" height="200"></canvas>
+                            <div class="legend" id="statusLegend"></div>
+                        </div>
+
+                        <!-- Top Issue Types Chart -->
+                        <div class="chart-container">
+                            <div class="chart-title">Top 10 Issue Types</div>
+                            <canvas id="issueTypesChart" width="200" height="200"></canvas>
+                            <div class="legend" id="typesLegend"></div>
+                        </div>
+                    </div>
+
+                    <!-- Top Issues List -->
+                    <div class="top-issues">
+                        <h3>Top 10 Issue Types</h3>
+                        <div id="topIssuesList">
+                            {% for issue_type, count in issue_stats.top_issue_types %}
+                            <div class="issue-item">
+                                <div class="issue-color" style="background-color: {{ loop.index0 | get_color }}"></div>
+                                <span>{{ issue_type[:15] }}{{ '...' if issue_type|length > 15 else '' }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Pending Issues Table -->
+                <div class="pending-issues-section" style="margin-top: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; font-size: 18px; color: #333;">Pending Issues</h3>
+                        <a href="{{ url_for('issues.issues') }}" style="color: #ee4d2d; text-decoration: none; font-size: 14px;">View All →</a>
+                    </div>
+
+                    <div class="pending-issues-container" style="background: #f8f9fa; border-radius: 8px; padding: 15px;">
+                        <div id="pending-issues-loading" style="text-align: center; padding: 20px; display: none;">
+                            <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #ee4d2d; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <span style="margin-left: 10px; color: #666;">Loading pending issues...</span>
+                        </div>
+
+                        <div class="pending-issues-table-wrapper" style="overflow-x: auto;">
+                            <table id="pending-issues-table" class="pending-issues-table" style="width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                <thead>
+                                    <tr style="background-color: #ee4d2d; color: white;">
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 600; font-size: 14px; border-bottom: none;">Unit</th>
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 600; font-size: 14px; border-bottom: none;">Issue</th>
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 600; font-size: 14px; border-bottom: none;">Description</th>
+                                        <th style="padding: 12px 15px; text-align: left; font-weight: 600; font-size: 14px; border-bottom: none;">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-issues-tbody">
+                                    <!-- Pending issues will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="pending-issues-empty" style="text-align: center; padding: 30px; color: #666; display: none;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                            <p style="margin: 0; font-size: 16px;">No pending issues found</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">Great job keeping up with all issues!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<!-- Replace the entire script section in dashboard.html with this updated version -->
+<script>
+// Color palettes
+const statusColors = {
+    'Pending': '#F0AD4E',
+    'In Progress': '#5BC0DE',
+    'Resolved': '#5CB85C',
+    'Rejected': '#D9534F'
+};
+
+const issueTypeColors = [
+    '#8B5A96', '#7B68A6', '#6B78B6', '#5B88C6', '#4B98D6',
+    '#3BA8E6', '#2BB8F6', '#1BC8FF', '#0BD8FF', '#00E8FF'
+];
+
+// Issues by Status Chart
+{% if current_user.has_permission('can_view_issues') %}
+
+// Function to fetch and update issues data based on filters
+function updateIssuesData(dateFilter = 'this-month', unitFilter = 'all') {
+    // Build query parameters for the filters
+    let params = new URLSearchParams();
+    params.append('time_filter', dateFilter);
+    if (unitFilter !== 'all') {
+        params.append('unit', unitFilter);
+    }
+
+    // Fetch filtered issues data
+    fetch('/api/analytics/issues?' + params.toString())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Update charts with new data
+            updateIssueCharts(data);
+        })
+        .catch(error => {
+            console.error('Error fetching filtered issues data:', error);
+            // Show error message or fallback to static data
+            console.log('Falling back to static data display');
+        });
+}
+
+// Function to populate unit filter dropdown
+function populateUnitFilter() {
+    fetch('/api/get_units')
+        .then(response => response.json())
+        .then(units => {
+            const unitFilter = document.getElementById('issue-unit-filter');
+            if (unitFilter) {
+                // Clear existing options except "All Units"
+                while (unitFilter.options.length > 1) {
+                    unitFilter.remove(1);
+                }
+
+                // Add units to dropdown
+                units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.unit_number;
+                    option.textContent = unit.unit_number;
+                    unitFilter.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching units:', error);
+        });
+}
+
+// Function to apply current filters
+function applyCurrentFilters() {
+    const dateFilter = document.getElementById('issue-date-filter');
+    const unitFilter = document.getElementById('issue-unit-filter');
+
+    if (dateFilter && unitFilter) {
+        updateIssuesData(dateFilter.value, unitFilter.value);
+    }
+}
+
+// Function to update issue charts with new data
+function updateIssueCharts(data) {
+    // Process data for status chart
+    const statusCounts = {};
+    const issueTypeCounts = {};
+
+    data.forEach(issue => {
+        // Count by status
+        if (issue.status_name) {
+            statusCounts[issue.status_name] = (statusCounts[issue.status_name] || 0) + 1;
+        }
+
+        // Count by issue type
+        if (issue.issue_item_name) {
+            issueTypeCounts[issue.issue_item_name] = (issueTypeCounts[issue.issue_item_name] || 0) + 1;
+        }
+    });
+
+    // Update status chart
+    updateStatusChart(statusCounts);
+
+    // Update issue types chart (top 10)
+    const sortedIssueTypes = Object.entries(issueTypeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+    updateIssueTypesChart(sortedIssueTypes);
+
+    // Update top issues list
+    updateTopIssuesList(sortedIssueTypes);
+}
+
+// Function to update status chart
+function updateStatusChart(statusCounts) {
+    const statusLabels = Object.keys(statusCounts);
+    const statusValues = Object.values(statusCounts);
+    const statusChartColors = statusLabels.map(label => statusColors[label] || '#999');
+
+    // Destroy existing chart if it exists and has destroy method
+    if (window.statusChart && typeof window.statusChart.destroy === 'function') {
+        window.statusChart.destroy();
+    }
+
+    if (statusLabels.length > 0) {
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        window.statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusValues,
+                    backgroundColor: statusChartColors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Update status legend
+        const statusLegend = document.getElementById('statusLegend');
+        if (statusLegend) {
+            statusLegend.innerHTML = '';
+            statusLabels.forEach((label, index) => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${statusChartColors[index]}"></div>
+                    <span>${label}</span>
+                `;
+                statusLegend.appendChild(legendItem);
+            });
+        }
+    }
+}
+
+// Function to update issue types chart
+function updateIssueTypesChart(sortedIssueTypes) {
+    const typesLabels = sortedIssueTypes.map(item => item[0]);
+    const typesValues = sortedIssueTypes.map(item => item[1]);
+
+    // Destroy existing chart if it exists and has destroy method
+    if (window.issueTypesChart && typeof window.issueTypesChart.destroy === 'function') {
+        window.issueTypesChart.destroy();
+    }
+
+    if (typesLabels.length > 0) {
+        const typesCtx = document.getElementById('issueTypesChart').getContext('2d');
+        window.issueTypesChart = new Chart(typesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: typesLabels,
+                datasets: [{
+                    data: typesValues,
+                    backgroundColor: issueTypeColors.slice(0, typesLabels.length),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Function to update top issues list
+function updateTopIssuesList(sortedIssueTypes) {
+    const topIssuesList = document.getElementById('topIssuesList');
+    topIssuesList.innerHTML = '';
+
+    sortedIssueTypes.forEach((item, index) => {
+        const issueType = item[0];
+        const count = item[1];
+
+        const issueItem = document.createElement('div');
+        issueItem.className = 'issue-item';
+        issueItem.innerHTML = `
+            <div class="issue-color" style="background-color: ${issueTypeColors[index % issueTypeColors.length]}"></div>
+            <span>${issueType.length > 15 ? issueType.substring(0, 15) + '...' : issueType} (${count})</span>
+        `;
+        topIssuesList.appendChild(issueItem);
+    });
+}
+
+{% endif %}
+
+// NEW: Function to create 2-layer doughnut chart
+function createTwoLayerExpenseChart(expenseBreakdown, totalExpenses, netIncome) {
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+
+    // Calculate total revenue for proper proportions
+    const totalRevenue = totalExpenses + netIncome;
+
+    // Prepare data for outer layer (main split)
+    const outerLabels = [];
+    const outerValues = [];
+    const outerColors = [];
+
+    // Add total expenses to outer layer - UPDATED COLOR
+    if (totalExpenses > 0) {
+        outerLabels.push('Total Expenses');
+        outerValues.push(totalExpenses);
+        outerColors.push('#FF5722'); // Red for expenses (consistent with text)
+    }
+
+    // Add net income to outer layer if positive - UPDATED COLOR
+    if (netIncome > 0) {
+        outerLabels.push('Net Income');
+        outerValues.push(netIncome);
+        outerColors.push('#4CAF50'); // Green for profit (consistent with text)
+    }
+
+    // Prepare data for inner layer (expense breakdown) - FIXED to only span expense portion
+    const innerLabels = [...expenseBreakdown.map(item => item.category)];
+    const innerRawValues = [...expenseBreakdown.map(item => item.amount)];
+    const innerValues = [...innerRawValues];
+
+    // Add a "spacer" value for the net income portion (transparent)
+    if (netIncome > 0) {
+        innerLabels.push(''); // Empty label for spacer
+        innerValues.push(netIncome); // Net income amount for proper spacing
+    }
+
+    // Enhanced color mapping for expense categories
+    const expenseColors = {
+        'Rental': '#D32F2F',
+        'Electricity': '#FF9800',
+        'Water': '#2196F3',
+        'Sewage': '#9C27B0',
+        'Internet': '#607D8B',
+        'Cleaner': '#4CAF50',
+        'Laundry': '#E91E63',
+        'Supplies': '#CDDC39',
+        'Repair': '#FF5722',
+        'Replace': '#673AB7',
+        'Other': '#009688'
+    };
+
+    // Map colors for inner layer, with transparent for the spacer
+    const innerColors = innerLabels.map(label => {
+        if (label === '') return 'transparent'; // Transparent for net income portion
+        return expenseColors[label] || '#999';
+    });
+
+    // Create the chart with two datasets
+    window.expenseChart = new Chart(expenseCtx, {
+        type: 'doughnut',
+        data: {
+            datasets: [
+                {
+                    // Outer layer - Main split
+                    label: 'Main Categories',
+                    data: outerValues,
+                    backgroundColor: outerColors,
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    borderRadius: 5,
+                    cutout: '45%', // Smaller cutout for outer ring
+                    radius: '90%'  // Outer ring size
+                },
+                {
+                    // Inner layer - Expense breakdown (with spacer for net income)
+                    label: 'Expense Details',
+                    data: innerValues,
+                    backgroundColor: innerColors,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    borderRadius: 3,
+                    cutout: '70%', // Larger cutout for inner ring
+                    radius: '70%'  // Inner ring size (smaller than outer)
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false // We'll create custom legend
+                },
+                tooltip: {
+                    filter: function(tooltipItem) {
+                        // Hide tooltip for the transparent spacer (empty label in inner layer)
+                        if (tooltipItem.datasetIndex === 1) {
+                            const index = tooltipItem.dataIndex;
+                            if (index >= innerLabels.length - 1 && innerLabels[index] === '') {
+                                return false;
+                            }
+                        }
+                        return true;
+                    },
+                    callbacks: {
+                        label: function(context) {
+                            const datasetIndex = context.datasetIndex;
+                            const dataIndex = context.dataIndex;
+                            let label, value;
+
+                            if (datasetIndex === 0) {
+                                // Outer layer
+                                label = outerLabels[dataIndex];
+                                value = outerValues[dataIndex];
+                                const percentage = Math.round((value / totalRevenue) * 100);
+                                return `${label}: RM${value.toFixed(2)} (${percentage}%)`;
+                            } else {
+                                // Inner layer
+                                label = innerLabels[dataIndex];
+                                value = innerRawValues[dataIndex]; // Use raw values for correct amounts
+
+                                // Skip empty labels (spacer)
+                                if (!label || label === '') return null;
+
+                                const percentage = Math.round((value / totalExpenses) * 100);
+                                return `${label}: RM${value.toFixed(2)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            },
+            onHover: (event, activeElements) => {
+                // Add hover effect
+                event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+            },
+            // Add animation
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1000
+            }
+        }
+    });
+
+    // Create custom legend below the chart
+    createCustomExpenseLegend(outerLabels, outerColors, expenseBreakdown.map(item => item.category), expenseBreakdown.map(item => expenseColors[item.category] || '#999'));
+}
+
+// NEW: Function to create custom legend for 2-layer chart
+function createCustomExpenseLegend(outerLabels, outerColors, innerLabels, innerColors) {
+    // Find or create legend container
+    let legendContainer = document.getElementById('expense-chart-legend');
+    if (!legendContainer) {
+        legendContainer = document.createElement('div');
+        legendContainer.id = 'expense-chart-legend';
+        legendContainer.style.marginTop = '15px';
+
+        // Insert after the chart canvas
+        const chartCanvas = document.getElementById('expenseChart');
+        chartCanvas.parentNode.insertBefore(legendContainer, chartCanvas.nextSibling);
+    }
+
+    // Clear existing legend
+    legendContainer.innerHTML = '';
+
+    // Create legend HTML
+    let legendHTML = '<div style="display: flex; flex-direction: column; gap: 15px;">';
+
+    // Main categories legend
+    if (outerLabels.length > 0) {
+        legendHTML += '<div>';
+        legendHTML += '<div style="font-weight: bold; margin-bottom: 8px; color: #333;">Main Categories:</div>';
+        legendHTML += '<div style="display: flex; flex-wrap: wrap; gap: 12px;">';
+
+        outerLabels.forEach((label, index) => {
+            legendHTML += `
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="width: 14px; height: 14px; background-color: ${outerColors[index]}; border-radius: 3px;"></div>
+                    <span style="font-size: 13px; color: #555;">${label}</span>
+                </div>
+            `;
+        });
+
+        legendHTML += '</div></div>';
+    }
+
+    // Expense details legend
+    if (innerLabels.length > 0) {
+        legendHTML += '<div>';
+        legendHTML += '<div style="font-weight: bold; margin-bottom: 8px; color: #333;">Expense Breakdown:</div>';
+        legendHTML += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
+
+        innerLabels.forEach((label, index) => {
+            legendHTML += `
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 12px; height: 12px; background-color: ${innerColors[index]}; border-radius: 2px;"></div>
+                    <span style="font-size: 12px; color: #666;">${label}</span>
+                </div>
+            `;
+        });
+
+        legendHTML += '</div></div>';
+    }
+
+    legendHTML += '</div>';
+
+    legendContainer.innerHTML = legendHTML;
+}
+
+// Function to update expense chart - UPDATED for 2-layer doughnut
+function updateExpenseChart(expenseBreakdown) {
+    // Destroy existing chart if it exists
+    if (window.expenseChart && typeof window.expenseChart.destroy === 'function') {
+        window.expenseChart.destroy();
+    }
+
+    if (expenseBreakdown.length > 0) {
+        // Get current data from the page for calculations
+        const revenueElement = document.querySelector('.pl-metric .revenue-color');
+        const expensesElement = document.querySelector('.pl-metric .expense-color');
+
+        let totalRevenue = 0;
+        let totalExpenses = 0;
+
+        // Extract revenue and expenses values from the display
+        if (revenueElement) {
+            const revenueText = revenueElement.textContent.replace('RM', '').replace(/,/g, '');
+            totalRevenue = parseFloat(revenueText) || 0;
+        }
+
+        if (expensesElement) {
+            const expensesText = expensesElement.textContent.replace('RM', '').replace(/,/g, '');
+            totalExpenses = parseFloat(expensesText) || 0;
+        }
+
+        const netIncome = totalRevenue - totalExpenses;
+
+        // Create the 2-layer chart
+        createTwoLayerExpenseChart(expenseBreakdown, totalExpenses, netIncome);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for the page to fully render
+    setTimeout(function() {
+        // Initialize Issues filters (existing code)
+        const dateFilter = document.getElementById('issue-date-filter');
+        const unitFilter = document.getElementById('issue-unit-filter');
+
+        if (dateFilter && unitFilter) {
+            // Populate unit filter first
+            populateUnitFilter();
+
+            // Load initial data with default filters (This Month, All Units)
+            updateIssuesData('this-month', 'all');
+
+            // Add change event listeners
+            dateFilter.addEventListener('change', function() {
+                applyCurrentFilters();
+            });
+
+            unitFilter.addEventListener('change', function() {
+                applyCurrentFilters();
+            });
+        }
+
+        // Initialize Earnings filters (UPDATED)
+        const earningsDateFilter = document.getElementById('earnings-date-filter');
+        const earningsUnitFilter = document.getElementById('earnings-unit-filter');
+
+        if (earningsDateFilter && earningsUnitFilter) {
+            // Populate unit filter for earnings
+            populateEarningsUnitFilter();
+
+            // Load initial data with default filters (This Month, All Units)
+            updateEarningsData('this-month', 'all');
+
+            // Add change event listeners
+            earningsDateFilter.addEventListener('change', function() {
+                applyCurrentEarningsFilters();
+            });
+
+            earningsUnitFilter.addEventListener('change', function() {
+                applyCurrentEarningsFilters();
+            });
+        }
+
+        // NEW: Load pending issues when page loads
+        if (document.getElementById('pending-issues-table')) {
+            loadPendingIssues('this-month', 'all');
+        }
+    }, 100);
+
+    // Update the applyCurrentFilters function to also update pending issues
+    const originalApplyCurrentFilters = window.applyCurrentFilters;
+    window.applyCurrentFilters = function() {
+        // Apply original filters for charts
+        if (typeof originalApplyCurrentFilters === 'function') {
+            originalApplyCurrentFilters();
+        } else {
+            // Fallback if originalApplyCurrentFilters doesn't exist
+            const dateFilter = document.getElementById('issue-date-filter');
+            const unitFilter = document.getElementById('issue-unit-filter');
+
+            if (dateFilter && unitFilter) {
+                updateIssuesData(dateFilter.value, unitFilter.value);
+            }
+        }
+
+        // Also update pending issues with same filters
+        const dateFilter = document.getElementById('issue-date-filter');
+        const unitFilter = document.getElementById('issue-unit-filter');
+
+        if (dateFilter && unitFilter && document.getElementById('pending-issues-table')) {
+            loadPendingIssues(dateFilter.value, unitFilter.value);
+        }
+    };
+
+    // Initialize static expense chart as fallback - UPDATED for 2-layer doughnut
+    const expenseData = {{ expense_stats.expense_breakdown | tojson }};
+    if (expenseData.length > 0 && !document.getElementById('earnings-date-filter')) {
+        // Calculate values for static chart
+        const staticRevenue = {{ expense_stats.revenue | default(0) }};
+        const staticTotalExpenses = {{ expense_stats.total_expenses | default(0) }};
+        const staticNetIncome = staticRevenue - staticTotalExpenses;
+
+        // Create 2-layer doughnut chart
+        createTwoLayerExpenseChart(expenseData, staticTotalExpenses, staticNetIncome);
+    }
+
+    // Original static chart code (fallback if no filter) for Issues
+    {% if current_user.has_permission('can_view_issues') %}
+    const statusData = {{ issue_stats.status_data | tojson }};
+    const statusLabels = Object.keys(statusData);
+    const statusValues = Object.values(statusData);
+    const statusChartColors = statusLabels.map(label => statusColors[label] || '#999');
+
+    // Fallback: Initialize with static data if no dynamic loading
+    if (statusLabels.length > 0 && !document.getElementById('issue-date-filter')) {
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        window.statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusValues,
+                    backgroundColor: statusChartColors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Create status legend
+        const statusLegend = document.getElementById('statusLegend');
+        statusLabels.forEach((label, index) => {
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            legendItem.innerHTML = `
+                <div class="legend-color" style="background-color: ${statusChartColors[index]}"></div>
+                <span>${label}</span>
+            `;
+            statusLegend.appendChild(legendItem);
+        });
+    }
+
+    // Top Issue Types Chart (Fallback)
+    const issueTypesData = {{ issue_stats.top_issue_types | tojson }};
+    if (issueTypesData.length > 0 && !document.getElementById('issue-date-filter')) {
+        const typesLabels = issueTypesData.map(item => item[0]);
+        const typesValues = issueTypesData.map(item => item[1]);
+
+        const typesCtx = document.getElementById('issueTypesChart').getContext('2d');
+        window.issueTypesChart = new Chart(typesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: typesLabels,
+                datasets: [{
+                    data: typesValues,
+                    backgroundColor: issueTypeColors.slice(0, typesLabels.length),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+
+// Add this function to populate the unit filter
+function populateEarningsUnitFilter() {
+    fetch('/api/get_units')
+        .then(response => response.json())
+        .then(units => {
+            const unitFilter = document.getElementById('earnings-unit-filter');
+            if (unitFilter) {
+                // Clear existing options except "All Units"
+                while (unitFilter.options.length > 1) {
+                    unitFilter.remove(1);
+                }
+
+                // Add units to dropdown
+                units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = unit.unit_number;
+                    unitFilter.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching units for earnings filter:', error);
+        });
+}
+
+// Update the updateEarningsData function to include unit filter
+function updateEarningsData(dateFilter = 'this-month', unitFilter = 'all') {
+    // Show loading state
+    const earningsSection = document.querySelector('.earnings-section');
+    if (earningsSection) {
+        earningsSection.style.opacity = '0.7';
+    }
+
+    // Build query parameters for the filters
+    let params = new URLSearchParams();
+    params.append('time_filter', dateFilter);
+    if (unitFilter !== 'all') {
+        params.append('unit_filter', unitFilter);
+    }
+
+    // Fetch filtered expenses data
+    fetch('/api/dashboard/earnings?' + params.toString())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Update earnings display with new data
+            updateEarningsDisplay(data, dateFilter, unitFilter);
+
+            // Remove loading state
+            if (earningsSection) {
+                earningsSection.style.opacity = '1';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching filtered earnings data:', error);
+            // Remove loading state on error
+            if (earningsSection) {
+                earningsSection.style.opacity = '1';
+            }
+            console.log('Falling back to static data display');
+        });
+}
+
+// Update the updateEarningsDisplay function to handle unit filter
+function updateEarningsDisplay(data, dateFilter, unitFilter = 'all') {
+    // Update the period text with unit information
+    const periodElement = document.getElementById('earnings-period');
+    if (periodElement) {
+        let unitText = 'All Units';
+        if (unitFilter !== 'all') {
+            const unitSelect = document.getElementById('earnings-unit-filter');
+            if (unitSelect) {
+                const selectedOption = unitSelect.options[unitSelect.selectedIndex];
+                unitText = selectedOption ? selectedOption.text : 'Selected Unit';
+            }
+        }
+        periodElement.textContent = `${getPeriodDisplayName(dateFilter)} | ${unitText}`;
+    }
+
+    // Update P&L metrics
+    updatePLMetrics(data);
+
+    // Update expense chart
+    updateExpenseChart(data.expense_breakdown || []);
+
+    // Update earnings & expenses summary table
+    updateEarningsExpensesSummaryTable(
+        data.expense_breakdown || [],
+        data.total_expenses || 0,
+        data.revenue || 0
+    );
+}
+
+// Function to apply current earnings filters
+function applyCurrentEarningsFilters() {
+    const dateFilter = document.getElementById('earnings-date-filter');
+    const unitFilter = document.getElementById('earnings-unit-filter');
+
+    if (dateFilter && unitFilter) {
+        updateEarningsData(dateFilter.value, unitFilter.value);
+    }
+}
+
+// Function to get display name for period
+function getPeriodDisplayName(dateFilter) {
+    const now = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+                       "July", "August", "September", "October", "November", "December"];
+
+    switch(dateFilter) {
+        case 'today':
+            return `Today (${now.toLocaleDateString()})`;
+        case 'yesterday':
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return `Yesterday (${yesterday.toLocaleDateString()})`;
+        case 'this-week':
+            return 'This Week';
+        case 'last-week':
+            return 'Last Week';
+        case 'this-month':
+            return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+        case 'last-month':
+            const lastMonth = new Date(now);
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+            return `${monthNames[lastMonth.getMonth()]} ${lastMonth.getFullYear()}`;
+        case 'this-year':
+            return `${now.getFullYear()}`;
+        case 'last-year':
+            return `${now.getFullYear() - 1}`;
+        default:
+            return 'Selected Period';
+    }
+}
+
+// Function to update P&L metrics
+function updatePLMetrics(data) {
+    // Update revenue - BLUE COLOR
+    const revenueElement = document.querySelector('.pl-metric .revenue-color');
+    if (revenueElement) {
+        revenueElement.textContent = `RM${(data.revenue || 0).toFixed(0)}`;
+        revenueElement.style.color = '#2196F3'; // Blue for revenue
+    }
+
+    // Update expenses - RED COLOR
+    const expensesElement = document.querySelector('.pl-metric .expense-color');
+    if (expensesElement) {
+        expensesElement.textContent = `RM${(data.total_expenses || 0).toFixed(0)}`;
+        expensesElement.style.color = '#FF5722'; // Red for expenses
+    }
+
+    // Update net income - GREEN COLOR
+    const incomeElement = document.querySelector('.pl-metric .income-color');
+    if (incomeElement) {
+        const netIncome = (data.revenue || 0) - (data.total_expenses || 0);
+        incomeElement.textContent = `RM${netIncome.toFixed(2)}`;
+        incomeElement.style.color = '#4CAF50'; // Green for income
+    }
+
+    // Get the current filter value to determine the comparison period
+    const currentFilter = document.getElementById('earnings-date-filter').value;
+    const comparisonPeriod = getPreviousPeriodDisplayName(currentFilter);
+
+    // Update change percentages with specific period comparisons
+    const changeElements = document.querySelectorAll('.pl-change');
+    if (changeElements.length >= 3) {
+        // Revenue change
+        const revenueChange = data.revenue_change || 0;
+        changeElements[0].textContent = `${revenueChange >= 0 ? '+' : ''}${revenueChange.toFixed(1)}% ${comparisonPeriod}`;
+        changeElements[0].className = `pl-change ${revenueChange >= 0 ? 'positive' : 'negative'}`;
+
+        // Expense change (negative is good for expenses)
+        const expenseChange = data.expense_change || 0;
+        changeElements[1].textContent = `${expenseChange >= 0 ? '+' : ''}${expenseChange.toFixed(1)}% ${comparisonPeriod}`;
+        changeElements[1].className = `pl-change ${expenseChange >= 0 ? 'negative' : 'positive'}`;
+
+        // Income change
+        const incomeChange = data.income_change || 0;
+        changeElements[2].textContent = `${incomeChange >= 0 ? '+' : ''}${incomeChange.toFixed(1)}% ${comparisonPeriod}`;
+        changeElements[2].className = `pl-change ${incomeChange >= 0 ? 'positive' : 'negative'}`;
+    }
+}
+
+// Function to update expense summary table
+function updateEarningsExpensesSummaryTable(expenseBreakdown, totalExpenses, totalRevenue) {
+    const tableBody = document.getElementById('earnings-expenses-summary-tbody');
+
+    if (tableBody) {
+        tableBody.innerHTML = '';
+
+        // Calculate net income
+        const netIncome = totalRevenue - totalExpenses;
+
+        // Revenue Row - BLUE STYLING
+        const revenueRow = document.createElement('tr');
+        revenueRow.className = 'revenue-row';
+        revenueRow.innerHTML = `
+            <td><strong>Revenue</strong></td>
+            <td><strong style="color: #2196F3;">${totalRevenue.toFixed(2)}</strong></td>
+            <td><strong style="color: #2196F3;">100%</strong></td>
+        `;
+        tableBody.appendChild(revenueRow);
+
+        // Expenses Header Row
+        const expensesHeaderRow = document.createElement('tr');
+        expensesHeaderRow.style.backgroundColor = '#f5f5f5';
+        expensesHeaderRow.style.borderTop = '2px solid #ddd';
+        expensesHeaderRow.innerHTML = `
+            <td><strong>Expenses:</strong></td>
+            <td></td>
+            <td></td>
+        `;
+        tableBody.appendChild(expensesHeaderRow);
+
+        // Individual Expense Rows
+        expenseBreakdown.forEach(item => {
+            const row = document.createElement('tr');
+            // Calculate percentage of total revenue (not just expenses)
+            const percentageOfRevenue = totalRevenue > 0 ? (item.amount / totalRevenue * 100) : 0;
+            row.innerHTML = `
+                <td style="padding-left: 20px;">${item.category}</td>
+                <td>${item.amount.toFixed(2)}</td>
+                <td>${percentageOfRevenue.toFixed(1)}%</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        // Total Expenses Row - RED STYLING
+        const totalExpensesRow = document.createElement('tr');
+        totalExpensesRow.className = 'expenses-row';
+        const totalExpensesPercent = totalRevenue > 0 ? (totalExpenses / totalRevenue * 100) : 0;
+        totalExpensesRow.innerHTML = `
+            <td><strong>Total Expenses</strong></td>
+            <td><strong style="color: #FF5722;">${totalExpenses.toFixed(2)}</strong></td>
+            <td><strong style="color: #FF5722;">${totalExpensesPercent.toFixed(1)}%</strong></td>
+        `;
+        tableBody.appendChild(totalExpensesRow);
+
+        // Net Income Row - GREEN STYLING
+        const netIncomeRow = document.createElement('tr');
+        netIncomeRow.className = 'income-row';
+        const netIncomePercent = totalRevenue > 0 ? (netIncome / totalRevenue * 100) : 0;
+        const netIncomeColor = netIncome >= 0 ? '#4CAF50' : '#F44336';
+
+        netIncomeRow.innerHTML = `
+            <td><strong>Net Income</strong></td>
+            <td><strong style="color: ${netIncomeColor};">${netIncome.toFixed(2)}</strong></td>
+            <td><strong style="color: ${netIncomeColor};">${netIncomePercent.toFixed(1)}%</strong></td>
+        `;
+        tableBody.appendChild(netIncomeRow);
+    }
+}
+
+function getPreviousPeriodDisplayName(dateFilter) {
+    switch(dateFilter) {
+        case 'today':
+            return 'vs yesterday';
+        case 'yesterday':
+            return 'vs day before yesterday';
+        case 'this-week':
+            return 'vs last week';
+        case 'last-week':
+            return 'vs week before last';
+        case 'this-month':
+            return 'vs last month';
+        case 'last-month':
+            return 'vs month before last';
+        case 'this-year':
+            return 'vs last year';
+        case 'last-year':
+            return 'vs year before last';
+        default:
+            return 'vs previous period';
+    }
+}
+
+// Function to load pending issues
+function loadPendingIssues(dateFilter = 'this-month', unitFilter = 'all') {
+    const loadingElement = document.getElementById('pending-issues-loading');
+    const tableElement = document.getElementById('pending-issues-table');
+    const emptyElement = document.getElementById('pending-issues-empty');
+
+    // Show loading state
+    if (loadingElement) loadingElement.style.display = 'block';
+    if (tableElement) tableElement.style.display = 'none';
+    if (emptyElement) emptyElement.style.display = 'none';
+
+    // Build query parameters for pending issues
+    let params = new URLSearchParams();
+    params.append('time_filter', dateFilter);
+    params.append('status_id', getPendingStatusId()); // We'll need to get the pending status ID
+    if (unitFilter !== 'all') {
+        params.append('unit', unitFilter);
+    }
+
+    // Fetch pending issues data
+    fetch('/api/analytics/issues?' + params.toString())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Filter for pending status (in case the API doesn't filter properly)
+            const pendingIssues = data.filter(issue =>
+                issue.status_name && issue.status_name.toLowerCase() === 'pending'
+            );
+
+            updatePendingIssuesTable(pendingIssues);
+        })
+        .catch(error => {
+            console.error('Error fetching pending issues:', error);
+            // Hide loading and show empty state on error
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (emptyElement) {
+                emptyElement.style.display = 'block';
+                emptyElement.innerHTML = `
+                    <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+                    <p style="margin: 0; font-size: 16px; color: #dc3545;">Error loading pending issues</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">Please try refreshing the page</p>
+                `;
+            }
+        });
+}
+
+// Helper function to get pending status ID (we'll hardcode this as "Pending" for simplicity)
+function getPendingStatusId() {
+    // Since we're filtering by status name in the frontend, we don't need the actual ID
+    // But if you want to use the ID, you'll need to get it from your backend
+    return null;
+}
+
+// Function to update the pending issues table
+function updatePendingIssuesTable(pendingIssues) {
+    const loadingElement = document.getElementById('pending-issues-loading');
+    const tableElement = document.getElementById('pending-issues-table');
+    const emptyElement = document.getElementById('pending-issues-empty');
+    const tbodyElement = document.getElementById('pending-issues-tbody');
+
+    // Hide loading
+    if (loadingElement) loadingElement.style.display = 'none';
+
+    if (pendingIssues.length === 0) {
+        // Show empty state
+        if (tableElement) tableElement.style.display = 'none';
+        if (emptyElement) emptyElement.style.display = 'block';
+        return;
+    }
+
+    // Show table and hide empty state
+    if (tableElement) tableElement.style.display = 'table';
+    if (emptyElement) emptyElement.style.display = 'none';
+
+    if (!tbodyElement) return;
+
+    // Clear existing rows
+    tbodyElement.innerHTML = '';
+
+    // Sort by date (newest first)
+    pendingIssues.sort((a, b) => new Date(b.date_added) - new Date(a.date_added));
+
+    // Limit to 10 most recent pending issues for dashboard
+    const limitedIssues = pendingIssues.slice(0, 10);
+
+    // Add rows for each pending issue
+    limitedIssues.forEach(issue => {
+        const row = document.createElement('tr');
+
+        // IMPROVED DATE PARSING - This is the key change
+        let formattedDate;
+        try {
+            // Ensure we have a valid date string
+            if (!issue.date_added) {
+                formattedDate = 'Unknown';
+            } else {
+                // Create date object from the ISO string
+                const dateAdded = new Date(issue.date_added);
+
+                // Check if the date is valid
+                if (isNaN(dateAdded.getTime())) {
+                    console.warn('Invalid date for issue:', issue.id, issue.date_added);
+                    formattedDate = 'Invalid date';
+                } else {
+                    // Use the fixed formatting function
+                    formattedDate = formatDateForPendingIssues(dateAdded);
+                }
+            }
+        } catch (error) {
+            console.error('Error parsing date for issue:', issue.id, error);
+            formattedDate = 'Error';
+        }
+
+        // Truncate description if too long
+        const description = issue.description || '';
+        const truncatedDescription = description.length > 100
+            ? description.substring(0, 100) + '...'
+            : description;
+
+        row.innerHTML = `
+            <td class="unit-cell">${issue.unit || 'N/A'}</td>
+            <td class="issue-cell">${issue.issue_item_name || 'General Issue'}</td>
+            <td class="description-cell" title="${description}">${truncatedDescription}</td>
+            <td class="date-cell">${formattedDate}</td>
+        `;
+
+        // Add click handler to navigate to issues page with filter
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', function() {
+            // Navigate to issues page and highlight this specific issue
+            window.location.href = `/issues?highlight=${issue.id}`;
+        });
+
+        tbodyElement.appendChild(row);
+    });
+
+    // Add "show more" row if there are more than 10 pending issues
+    if (pendingIssues.length > 10) {
+        const showMoreRow = document.createElement('tr');
+        showMoreRow.style.backgroundColor = '#f8f9fa';
+        showMoreRow.innerHTML = `
+            <td colspan="4" style="text-align: center; padding: 15px; color: #666; font-style: italic;">
+                <a href="/issues?status=Pending" style="color: #ee4d2d; text-decoration: none;">
+                    ${pendingIssues.length - 10} more pending issues... Click to view all →
+                </a>
+            </td>
+        `;
+        tbodyElement.appendChild(showMoreRow);
+    }
+}
+
+// Helper function to format date for pending issues table
+// Helper function to format date for pending issues table
+function formatDateForPendingIssues(date) {
+    const now = new Date();
+
+    // Ensure we're working with Date objects
+    const issueDate = new Date(date);
+
+    // Calculate the time difference (without Math.abs to detect future dates)
+    const diffTime = now.getTime() - issueDate.getTime();
+
+    // If the difference is negative, the issue date is in the future (shouldn't happen)
+    // or there's a timezone issue - just show the actual date
+    if (diffTime < 0) {
+        return issueDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    const diffSeconds = Math.floor(diffTime / 1000);
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    // Just added (less than 1 minute)
+    if (diffSeconds < 60) {
+        return 'Just now';
+    }
+    // Less than 1 hour
+    else if (diffMinutes < 60) {
+        return `${diffMinutes}m ago`;
+    }
+    // Less than 24 hours
+    else if (diffHours < 24) {
+        return `${diffHours}h ago`;
+    }
+    // Yesterday
+    else if (diffDays === 1) {
+        return 'Yesterday';
+    }
+    // Less than a week
+    else if (diffDays < 7) {
+        return `${diffDays}d ago`;
+    }
+    // Older than a week - show actual date
+    else {
+        return issueDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: issueDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+    }
+}
+</script>
+{% endblock %}

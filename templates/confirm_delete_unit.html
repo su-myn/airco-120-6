@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Delete Unit - PropertyHub{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .confirmation-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        max-width: 600px;
+        margin: 40px auto;
+    }
+
+    .warning-header {
+        color: #d9534f;
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+    }
+
+    .data-section {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .data-count {
+        margin-bottom: 5px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .data-count span:last-child {
+        font-weight: bold;
+    }
+
+    .warning-text {
+        color: #d9534f;
+        font-weight: bold;
+        margin: 20px 0;
+    }
+
+    .confirmation-form {
+        margin-top: 30px;
+    }
+
+    .confirmation-input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .button-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .cancel-btn {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        flex: 1;
+    }
+
+    .delete-btn {
+        background-color: #d9534f;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        flex: 1;
+        font-weight: bold;
+    }
+
+    .delete-btn:disabled {
+        background-color: #f1a6a3;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="confirmation-container">
+    <h2 class="warning-header">Confirm Unit Deletion</h2>
+
+    <p><strong>You are about to delete unit: {{ unit.unit_number }}</strong></p>
+
+    <div class="data-section">
+        <h3>This will permanently delete the following data:</h3>
+
+        <div class="data-count">
+            <span>Expense Records:</span>
+            <span>{{ expense_count }}</span>
+        </div>
+        <div class="data-count">
+            <span>Booking Records:</span>
+            <span>{{ booking_count }}</span>
+        </div>
+        <div class="data-count">
+            <span>Issue Records:</span>
+            <span>{{ issue_count }}</span>
+        </div>
+        <div class="data-count">
+            <span>Complaint Records:</span>
+            <span>{{ complaint_count }}</span>
+        </div>
+        <div class="data-count">
+            <span>Repair Records:</span>
+            <span>{{ repair_count }}</span>
+        </div>
+        <div class="data-count">
+            <span>Replacement Records:</span>
+            <span>{{ replacement_count }}</span>
+        </div>
+    </div>
+
+    <p class="warning-text">⚠️ WARNING: This action cannot be undone. All data related to this unit will be permanently deleted.</p>
+
+    <form id="confirmationForm" class="confirmation-form" action="{{ url_for('units.delete_unit', id=unit.id) }}" method="POST">
+        <p>To confirm deletion, please type <strong>"DELETE {{ unit.unit_number }}"</strong> below:</p>
+        <input type="text" id="confirmation-text" class="confirmation-input" placeholder="Type DELETE followed by unit number" required>
+
+        <div class="button-row">
+            <a href="{{ url_for('units.manage_units') }}" class="cancel-btn">Cancel</a>
+            <button type="submit" id="delete-btn" class="delete-btn" disabled>Permanently Delete</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Enable the delete button only when the correct confirmation text is entered
+    document.getElementById('confirmation-text').addEventListener('input', function() {
+        const expectedText = "DELETE {{ unit.unit_number }}";
+        const deleteBtn = document.getElementById('delete-btn');
+
+        if (this.value === expectedText) {
+            deleteBtn.disabled = false;
+        } else {
+            deleteBtn.disabled = true;
+        }
+    });
+</script>
+{% endblock %}

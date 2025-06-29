@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Update Cleaner Information{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .form-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-title {
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .form-section {
+        margin-bottom: 30px;
+    }
+
+    .form-section-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #ee4d2d;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+    }
+
+    .form-actions button {
+        flex: 1;
+    }
+
+    .form-actions a {
+        flex: 1;
+        text-align: center;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    .form-actions a:hover {
+        background-color: #5a6268;
+        text-decoration: none;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .cleaner-info {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        gap: 15px;
+    }
+
+    .cleaner-avatar {
+        width: 60px;
+        height: 60px;
+        background-color: #ee4d2d;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+    }
+
+    .cleaner-name {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .cleaner-role {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #e0e0e0;
+        color: #333;
+        border-radius: 3px;
+        font-size: 14px;
+    }
+
+    .units-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .unit-checkbox {
+        display: none;
+    }
+
+    .unit-label {
+        display: block;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+    }
+
+    .unit-checkbox:checked + .unit-label {
+        background-color: #e2f0ff;
+        border-color: #4169E1;
+        font-weight: bold;
+    }
+
+    .unit-label:hover {
+        background-color: #f5f5f5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="form-title">Update Cleaner Information</h2>
+
+    <div class="cleaner-info">
+        <div class="cleaner-avatar">
+            {{ cleaner.name[0] | upper }}
+        </div>
+        <div>
+            <div class="cleaner-name">{{ cleaner.name }}</div>
+            <div class="cleaner-role">{{ cleaner.role.name }}</div>
+            <div>{{ cleaner.email }}</div>
+        </div>
+    </div>
+
+    <form method="post" action="{{ url_for('cleaners.update_cleaner', id=cleaner.id) }}">
+        <div class="form-section">
+            <div class="form-section-title">Contact Information</div>
+            <div class="form-group">
+                <label for="phone_number">Phone Number</label>
+                <input type="text" id="phone_number" name="phone_number" value="{{ cleaner.phone_number or '' }}" placeholder="Enter phone number">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Assigned Units</div>
+            <p>Select which units this cleaner is responsible for:</p>
+
+            <div class="units-grid">
+                {% for unit in units %}
+                <div>
+                    <input type="checkbox" id="unit-{{ unit.id }}" name="assigned_units" value="{{ unit.id }}" class="unit-checkbox"
+                        {% if unit in cleaner.assigned_units %}checked{% endif %}>
+                    <label for="unit-{{ unit.id }}" class="unit-label">{{ unit.unit_number }}</label>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not units %}
+            <p>No units available. Please add units first.</p>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="admin-btn">Update Cleaner</button>
+            <a href="{{ url_for('cleaners.manage_cleaners') }}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

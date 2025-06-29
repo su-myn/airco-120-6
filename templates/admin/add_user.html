@@ -1,0 +1,56 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Add New User{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <h2>Add New User</h2>
+
+    <form method="post" class="admin-form">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+
+        <div class="form-group">
+            <label for="company_id">Company</label>
+            <select id="company_id" name="company_id" required>
+                <option value="">Select Company</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="role_id">Role</label>
+            <select id="role_id" name="role_id" required>
+                <option value="">Select Role</option>
+                {% for role in roles %}
+                <option value="{{ role.id }}">{{ role.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" style="display: flex; align-items: center;">
+            <input type="checkbox" id="is_cleaner" name="is_cleaner" style="width: auto; margin-right: 10px;">
+            <label for="is_cleaner">Is Cleaner</label>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="admin-btn">Add User</button>
+            <a href="{{ url_for('admin.admin_users') }}" class="admin-btn secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

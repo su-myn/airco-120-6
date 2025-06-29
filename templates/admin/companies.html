@@ -1,0 +1,73 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Manage Companies{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Manage Companies</h2>
+        <a href="{{ url_for('admin.admin_add_company') }}" class="admin-btn">Add New Company</a>
+    </div>
+
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Company Name</th>
+                <th>Max Units</th>
+                <th>Current Units</th>
+                <th>Usage</th>
+                <th>User Limits (M/S/C)</th>
+                <th>Current Users (M/S/C)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in companies %}
+            {% set unit_count = company.units|length %}
+            {% set usage_percent = ((unit_count / company.max_units) * 100)|round(1) %}
+            {% set manager_count = company.get_user_count_by_role('Manager') %}
+            {% set staff_count = company.get_user_count_by_role('Staff') %}
+            {% set cleaner_count = company.get_user_count_by_role('Cleaner') %}
+            <tr>
+                <td>{{ company.id }}</td>
+                <td>{{ company.name }}</td>
+                <td>{{ company.max_units }}</td>
+                <td>{{ unit_count }}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 100px; height: 10px; background-color: #e0e0e0; border-radius: 5px; overflow: hidden;">
+                            <div style="width: {{ usage_percent }}%; height: 100%; background-color: {% if usage_percent >= 90 %}#f44336{% elif usage_percent >= 75 %}#ff9800{% else %}#4caf50{% endif %};"></div>
+                        </div>
+                        <span style="font-size: 0.9em; color: {% if usage_percent >= 90 %}#f44336{% elif usage_percent >= 75 %}#ff9800{% else %}#666{% endif %};">
+                            {{ usage_percent }}%
+                        </span>
+                    </div>
+                </td>
+                <td>
+                    <span style="font-size: 0.9em;">
+                        {{ company.max_manager_users }}/{{ company.max_staff_users }}/{{ company.max_cleaner_users }}
+                    </span>
+                </td>
+                <td>
+                    <span style="font-size: 0.9em; color: {% if manager_count >= company.max_manager_users or staff_count >= company.max_staff_users or cleaner_count >= company.max_cleaner_users %}#f44336{% else %}#4caf50{% endif %};">
+                        {{ manager_count }}/{{ staff_count }}/{{ cleaner_count }}
+                    </span>
+                </td>
+                <td>
+                    <a href="{{ url_for('admin.admin_edit_company', id=company.id) }}" class="admin-btn">Edit</a>
+                    <a href="{{ url_for('admin.admin_delete_company', id=company.id) }}" class="admin-btn secondary" onclick="return confirm('Are you sure you want to delete this company?')">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if not companies %}
+    <div style="text-align: center; padding: 40px; color: #666;">
+        <p>No companies found.</p>
+        <a href="{{ url_for('admin.admin_add_company') }}" class="admin-btn">Add the first company</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

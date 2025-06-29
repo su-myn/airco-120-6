@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Units{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .units-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .unit-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .unit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .unit-title {
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin: 0;
+    }
+    
+    .unit-status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        color: white;
+    }
+    
+    .status-occupied {
+        background-color: #4CAF50;
+    }
+    
+    .status-vacant {
+        background-color: #F44336;
+    }
+    
+    .unit-details {
+        margin-bottom: 15px;
+    }
+    
+    .detail-row {
+        display: flex;
+        margin-bottom: 8px;
+    }
+    
+    .detail-label {
+        font-weight: bold;
+        width: 120px;
+    }
+    
+    .unit-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .progress-container {
+        margin-bottom: 20px;
+    }
+    
+    .progress-bar {
+        height: 10px;
+        background-color: #e0e0e0;
+        border-radius: 5px;
+        margin-top: 5px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background-color: #4CAF50;
+        border-radius: 5px;
+        transition: width 0.3s ease;
+    }
+    
+    .progress-warning {
+        background-color: #FFC107;
+    }
+    
+    .progress-danger {
+        background-color: #F44336;
+    }
+    
+    .account-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .unit-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .unit-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .units-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .unit-actions {
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .unit-actions a {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    .search-container {
+        margin-bottom: 20px;
+        width: 100%;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        color: #ccc;
+        margin-bottom: 20px;
+    }
+
+    .empty-state-message {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 20px;
+    }
+    
+    .add-button {
+        background-color: #ee4d2d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .add-button:hover {
+        background-color: #d44424;
+        text-decoration: none;
+    }
+
+    .cleaner-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background-color: #e8f4ff;
+        border: 1px solid #b3d7ff;
+        border-radius: 12px;
+        font-size: 12px;
+        color: #0066cc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div>
+    <div class="units-header">
+        <h1>Manage Units</h1>
+        <a href="{{ url_for('units.add_unit') }}" class="add-button">+ Add New Unit</a>
+    </div>
+
+    <div class="account-card">
+        <p>Company: <strong>{{ current_user.company.name }}</strong></p>
+
+        <div class="progress-container">
+            {% set unit_count = units|length %}
+            {% set unit_limit = current_user.company.max_units %}
+            {% set percentage = (unit_count / unit_limit) * 100 %}
+
+            <div>Units: <strong>{{ unit_count }} / {{ unit_limit }}</strong> ({{ percentage|round }}%)</div>
+            <div class="progress-bar">
+                <div class="progress-fill {% if percentage > 90 %}progress-danger{% elif percentage > 75 %}progress-warning{% endif %}"
+                     style="width: {{ percentage }}%"></div>
+            </div>
+
+            {% if percentage > 75 %}
+                <p style="color: {% if percentage > 90 %}#F44336{% else %}#FFC107{% endif %}; margin-top: 5px;">
+                    {% if percentage > 90 %}
+                        You're almost at your unit limit! Contact administrator to increase your limit.
+                    {% else %}
+                        You're approaching your unit limit.
+                    {% endif %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="search-container">
+        <input type="text" id="unitSearch" class="search-input" placeholder="Search units by number, building, or description..." style="width: 100%; padding: 10px;">
+    </div>
+    
+    {% if units %}
+        <div class="unit-grid" id="unitGrid">
+            {% for unit in units %}
+                <div class="unit-card">
+                    <div class="unit-header">
+                        <div class="unit-title">{{ unit.unit_number }}</div>
+                        <span class="unit-status {% if unit.is_occupied %}status-occupied{% else %}status-vacant{% endif %}">
+                            {{ "Active" if unit.is_occupied else "Not Active" }}
+                        </span>
+                    </div>
+                    
+
+                    <!-- Unit details section to replace in manage_units.html -->
+                    <div class="unit-details">
+                        {% if unit.building %}
+                            <div class="detail-row">
+                                <div class="detail-label">Building:</div>
+                                <div>{{ unit.building }}</div>
+                            </div>
+                        {% endif %}
+                        <!--
+                        {% if unit.letterbox_code %}
+                            <div class="detail-row">
+                                <div class="detail-label">Letterbox Code:</div>
+                                <div>{{ unit.letterbox_code }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.smartlock_code %}
+                            <div class="detail-row">
+                                <div class="detail-label">Smartlock Code:</div>
+                                <div>{{ unit.smartlock_code }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.wifi_name %}
+                            <div class="detail-row">
+                                <div class="detail-label">WIFI Name:</div>
+                                <div>{{ unit.wifi_name }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.wifi_password %}
+                            <div class="detail-row">
+                                <div class="detail-label">WIFI Password:</div>
+                                <div>{{ unit.wifi_password }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.bedrooms is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Bedrooms:</div>
+                                <div>{{ unit.bedrooms }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.bathrooms is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Bathrooms:</div>
+                                <div>{{ unit.bathrooms }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.sq_ft is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Sq ft:</div>
+                                <div>{{ unit.sq_ft }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.toilet_count is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Toilet Count:</div>
+                                <div>{{ unit.toilet_count }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.towel_count is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Towel Count:</div>
+                                <div>{{ unit.towel_count }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.default_toilet_paper is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Default Toilet Paper:</div>
+                                <div>{{ unit.default_toilet_paper }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.default_towel is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Default Towel:</div>
+                                <div>{{ unit.default_towel }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.default_garbage_bag is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Default Garbage Bag:</div>
+                                <div>{{ unit.default_garbage_bag }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.monthly_rent is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Monthly Rent:</div>
+                                <div>{{ unit.monthly_rent }}</div>
+                            </div>
+                        {% endif %}
+                        -->
+
+                        {% if unit.max_pax is not none %}
+                            <div class="detail-row">
+                                <div class="detail-label">Max Pax:</div>
+                                <div>{{ unit.max_pax }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if unit.assigned_cleaners.count() > 0 %}
+                            <div class="detail-row">
+                                <div class="detail-label">Assigned Cleaner:</div>
+                                <div>
+                                    {% for cleaner in unit.assigned_cleaners %}
+                                        <span class="cleaner-badge">{{ cleaner.name }}</span>
+                                        {% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+
+                    <div class="unit-actions">
+                        <a href="{{ url_for('units.unit_info', id=unit.id) }}" class="admin-btn">View</a>
+                        <a href="{{ url_for('units.edit_unit', id=unit.id) }}" class="admin-btn">Edit</a>
+                        <a href="{{ url_for('units.confirm_delete_unit', id=unit.id) }}" class="admin-btn secondary">Delete</a>
+
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🏢</div>
+            <div class="empty-state-message">You don't have any units yet.</div>
+            <a href="{{ url_for('units.add_unit') }}" class="add-button">+ Add Your First Unit</a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // Search functionality
+    document.getElementById('unitSearch').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const unitCards = document.querySelectorAll('.unit-card');
+        
+        unitCards.forEach(card => {
+            const unitNumber = card.querySelector('.unit-title').textContent.toLowerCase();
+
+            // Find building info without jQuery
+            let building = '';
+            const buildingLabel = Array.from(card.querySelectorAll('.detail-label')).find(el => el.textContent.includes('Building:'));
+            if (buildingLabel && buildingLabel.nextElementSibling) {
+                building = buildingLabel.nextElementSibling.textContent.toLowerCase();
+            }
+
+            // Find description info without jQuery
+            let description = '';
+            const descriptionLabel = Array.from(card.querySelectorAll('.detail-label')).find(el => el.textContent.includes('Description:'));
+            if (descriptionLabel && descriptionLabel.nextElementSibling) {
+                description = descriptionLabel.nextElementSibling.textContent.toLowerCase();
+            }
+
+            if (unitNumber.includes(searchTerm) || building.includes(searchTerm) || description.includes(searchTerm)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

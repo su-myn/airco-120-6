@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Unit{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .form-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .form-title {
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+    }
+
+    .form-actions button {
+        flex: 1;
+    }
+
+    .form-actions a {
+        flex: 1;
+        text-align: center;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    .form-actions a:hover {
+        background-color: #5a6268;
+        text-decoration: none;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="form-title">Add New Unit</h2>
+
+    <form method="post" action="{{ url_for('units.add_unit') }}">
+        <div class="form-group">
+            <label for="unit_number">Unit Number/Name *</label>
+            <input type="text" id="unit_number" name="unit_number" required>
+            <small style="color: #6c757d; display: block; margin-top: 5px;">This should be unique within your company</small>
+        </div>
+
+        <div class="form-group">
+            <label for="building">Building</label>
+            <input type="text" id="building" name="building">
+        </div>
+
+        <div class="form-group">
+            <label for="address">Address</label>
+            <input type="text" id="address" name="address" value="{{ unit.address if unit is defined else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="letterbox_code">Letterbox Code</label>
+            <input type="text" id="letterbox_code" name="letterbox_code">
+        </div>
+
+        <div class="form-group">
+            <label for="smartlock_code">Smartlock Code</label>
+            <input type="text" id="smartlock_code" name="smartlock_code">
+        </div>
+
+        <div class="form-group">
+            <label for="wifi_name">WIFI Name</label>
+            <input type="text" id="wifi_name" name="wifi_name">
+        </div>
+
+        <div class="form-group">
+            <label for="wifi_password">WIFI Password</label>
+            <input type="text" id="wifi_password" name="wifi_password">
+        </div>
+
+        <div class="form-group">
+            <label for="bedrooms">Bedrooms</label>
+            <input type="number" id="bedrooms" name="bedrooms" min="0">
+        </div>
+
+        <div class="form-group">
+            <label for="bathrooms">Bathrooms</label>
+            <input type="number" id="bathrooms" name="bathrooms" min="0" step="0.5">
+        </div>
+
+        <div class="form-group">
+            <label for="sq_ft">Sq ft</label>
+            <input type="number" id="sq_ft" name="sq_ft" min="0">
+        </div>
+
+        <div class="form-group">
+            <label for="toilet_count">Toilet Count</label>
+            <input type="number" id="toilet_count" name="toilet_count" min="0" value="{{ unit.toilet_count if unit is defined else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="towel_count">Towel Count</label>
+            <input type="number" id="towel_count" name="towel_count" min="0" value="{{ unit.towel_count if unit is defined else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="default_toilet_paper">Default Toilet Paper</label>
+            <input type="number" id="default_toilet_paper" name="default_toilet_paper" min="0">
+        </div>
+
+        <div class="form-group">
+            <label for="default_towel">Default Towel</label>
+            <input type="number" id="default_towel" name="default_towel" min="0">
+        </div>
+
+        <div class="form-group">
+            <label for="default_garbage_bag">Default Garbage Bag</label>
+            <input type="number" id="default_garbage_bag" name="default_garbage_bag" min="0">
+        </div>
+
+        <div class="form-group">
+            <label for="monthly_rent">Monthly Rent</label>
+            <input type="number" id="monthly_rent" name="monthly_rent" min="0" step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label for="max_pax">Maximum Occupants (Pax)</label>
+            <input type="number" id="max_pax" name="max_pax" min="1" value="{{ unit.max_pax if unit is defined else '' }}">
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="is_occupied" name="is_occupied" checked>
+            <label for="is_occupied">Mark as Active</label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="admin-btn">Add Unit</button>
+            <a href="{{ url_for('units.manage_units') }}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

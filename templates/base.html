@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PropertyHub{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    {% block additional_styles %}{% endblock %}
+    <style>
+        /* Updated navbar styles - ADD THESE TO YOUR styles.css */
+        /* Navbar Styles - Updated for better responsiveness */
+        .navbar {
+            background-color: #ee4d2d;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            flex-wrap: wrap;
+            min-height: 60px;
+            box-sizing: border-box;
+        }
+
+        .navbar h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            min-width: 120px;
+        }
+
+        /* Navbar links container - more responsive */
+        .navbar-links {
+            display: flex;
+            gap: 0.2rem;
+            flex-wrap: nowrap;
+            align-items: center;
+            max-width: calc(100% - 250px); /* Reserve space for logo and sign out */
+            overflow: hidden;
+        }
+
+        .navbar-link {
+            color: white;
+            text-decoration: none;
+            padding: 0.3rem 0.4rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .navbar-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Navbar separator */
+        .navbar-separator {
+            width: 1px;
+            height: 24px;
+            background-color: rgba(255, 255, 255, 0.6);
+            margin: 0 4px;
+            flex-shrink: 0;
+            border-radius: 1px;
+        }
+
+        /* Sign out button - always visible */
+        .logout-btn {
+            background-color: transparent;
+            color: white;
+            border: 1px solid white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-left: auto;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Mobile Menu Button */
+        .mobile-menu-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            position: relative;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0;
+            margin-left: 10px;
+        }
+
+        .mobile-menu-btn span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background: white;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        /* Mobile Menu */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background: #ee4d2d;
+            padding: 1rem;
+            flex-direction: column;
+            z-index: 1000;
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+
+        .mobile-menu.active {
+            display: flex;
+        }
+
+        .mobile-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        .mobile-menu a:last-child {
+            border-bottom: none;
+        }
+
+        .mobile-menu a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Mobile menu separator */
+        .mobile-menu-separator {
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.4);
+            margin: 8px 0;
+            border-radius: 1px;
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 1400px) {
+            .navbar-links {
+                gap: 0.1rem;
+            }
+
+            .navbar-link {
+                padding: 0.25rem 0.35rem;
+                font-size: 13px;
+            }
+
+            .navbar-separator {
+                margin: 0 3px;
+                width: 1px;
+                height: 22px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .navbar-links {
+                display: none; /* Hide main links */
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .navbar {
+                justify-content: space-between;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .navbar-links {
+                display: none; /* Hide main links even earlier if needed */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0.8rem;
+            }
+
+            .navbar h1 {
+                font-size: 1.3rem;
+            }
+
+            .logout-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar {
+                padding: 0.6rem;
+            }
+
+            .navbar h1 {
+                font-size: 1.2rem;
+                min-width: 100px;
+            }
+
+            .logout-btn {
+                padding: 0.3rem 0.6rem;
+                font-size: 12px;
+            }
+        }
+
+        /* Demo content */
+        .demo-content {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .welcome-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+        }
+
+        .user-welcome {
+            font-size: 13px;
+            color: #666;
+            text-align: right;
+            margin: 0 5px 20px 0;
+        }
+
+        .user-welcome span {
+            font-weight: bold;
+            color: #ee4d2d;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>PropertyHub</h1>
+
+        <!-- Desktop Navigation Links -->
+        <div class="navbar-links">
+            {% if current_user.is_authenticated %}
+                <!-- Dashboard Section -->
+                {% if not current_user.is_cleaner %}
+                    <a href="{{ url_for('dashboard.dashboard') }}" class="navbar-link">Dashboard</a>
+                    <div class="navbar-separator"></div>
+                {% endif %}
+
+                {% if current_user.is_cleaner %}
+                    <a href="{{ url_for('cleaners.cleaner_dashboard') }}" class="navbar-link">Cleaner Dashboard</a>
+                    <div class="navbar-separator"></div>
+                {% endif %}
+
+                <!-- Issues & Analytics Section -->
+                {% set issues_group_visible = false %}
+                {% if current_user.has_permission('can_view_issues') %}
+                    <a href="{{ url_for('issues.issues') }}" class="navbar-link">Issues</a>
+                    {% set issues_group_visible = true %}
+                {% endif %}
+                {% if current_user.has_permission('can_view_analytics') %}
+                    <a href="{{ url_for('analytics.analytics') }}" class="navbar-link">Analytics</a>
+                    {% set issues_group_visible = true %}
+                {% endif %}
+                {% if issues_group_visible %}
+                    <div class="navbar-separator"></div>
+                {% endif %}
+
+                <!-- Expenses Section -->
+                {% if current_user.has_permission('can_view_expenses') %}
+                    <a href="{{ url_for('expenses.expenses') }}" class="navbar-link">Expenses</a>
+                    <div class="navbar-separator"></div>
+                {% endif %}
+
+                <!-- Booking Management Section -->
+                {% set booking_group_visible = false %}
+                {% if current_user.has_permission('can_view_bookings') %}
+                    <a href="{{ url_for('bookings.bookings') }}" class="navbar-link">Bookings</a>
+                    {% set booking_group_visible = true %}
+                {% endif %}
+                {% if current_user.has_permission('can_view_calendar') %}
+                    <a href="{{ url_for('calendar.calendar_view') }}" class="navbar-link">Calendar</a>
+                    {% set booking_group_visible = true %}
+                {% endif %}
+                {% if current_user.has_permission('can_view_occupancy') %}
+                    <a href="{{ url_for('occupancy.occupancy') }}" class="navbar-link">Occupancy</a>
+                    {% set booking_group_visible = true %}
+                {% endif %}
+                {% if booking_group_visible %}
+                    <div class="navbar-separator"></div>
+                {% endif %}
+
+                <!-- Contacts Section -->
+                {% if current_user.has_permission('can_view_contacts') %}
+                    <a href="{{ url_for('contacts.contacts') }}" class="navbar-link">Contacts</a>
+                    <div class="navbar-separator"></div>
+                {% endif %}
+
+                <!-- Management Section -->
+                {% set management_group_visible = false %}
+                {% if current_user.has_permission('can_view_units') %}
+                    <a href="{{ url_for('units.manage_units') }}" class="navbar-link">Manage Units</a>
+                    {% set management_group_visible = true %}
+                {% endif %}
+                {% if current_user.has_permission('can_view_manage_cleaners') %}
+                    <a href="{{ url_for('cleaners.manage_cleaners') }}" class="navbar-link">Manage Cleaners</a>
+                    {% set management_group_visible = true %}
+                {% endif %}
+                {% if current_user.role.name in ['Manager', 'Admin'] or current_user.is_admin %}
+                    <a href="{{ url_for('user_management.manage_users') }}" class="navbar-link">Manage Users</a>
+                    {% set management_group_visible = true %}
+                {% endif %}
+                {% if current_user.has_permission('can_view_jadual_pembersihan') %}
+                    <a href="{{ url_for('cleaners.cleaning_schedule') }}" class="navbar-link">Jadual Pembersihan</a>
+                    {% set management_group_visible = true %}
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Sign Out Button - Always Visible -->
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('auth.logout') }}" class="logout-btn">Sign Out</a>
+        {% else %}
+            <a href="{{ url_for('auth.login') }}" class="navbar-link">Sign In</a>
+        {% endif %}
+
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        {% if current_user.is_authenticated %}
+            <!-- Dashboard Section -->
+            {% if not current_user.is_cleaner %}
+                <a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a>
+                <div class="mobile-menu-separator"></div>
+            {% endif %}
+
+            {% if current_user.is_cleaner %}
+                <a href="{{ url_for('cleaners.cleaner_dashboard') }}">Cleaner Dashboard</a>
+                <div class="mobile-menu-separator"></div>
+            {% endif %}
+
+            <!-- Issues & Analytics Section -->
+            {% set mobile_issues_group_visible = false %}
+            {% if current_user.has_permission('can_view_issues') %}
+                <a href="{{ url_for('issues.issues') }}">Issues</a>
+                {% set mobile_issues_group_visible = true %}
+            {% endif %}
+            {% if current_user.has_permission('can_view_analytics') %}
+                <a href="{{ url_for('analytics.analytics') }}">Analytics</a>
+                {% set mobile_issues_group_visible = true %}
+            {% endif %}
+            {% if mobile_issues_group_visible %}
+                <div class="mobile-menu-separator"></div>
+            {% endif %}
+
+            <!-- Expenses Section -->
+            {% if current_user.has_permission('can_view_expenses') %}
+                <a href="{{ url_for('expenses.expenses') }}">Expenses</a>
+                <div class="mobile-menu-separator"></div>
+            {% endif %}
+
+            <!-- Booking Management Section -->
+            {% set mobile_booking_group_visible = false %}
+            {% if current_user.has_permission('can_view_bookings') %}
+                <a href="{{ url_for('bookings.bookings') }}">Bookings</a>
+                {% set mobile_booking_group_visible = true %}
+            {% endif %}
+            {% if current_user.has_permission('can_view_calendar') %}
+                <a href="{{ url_for('calendar.calendar_view') }}">Calendar</a>
+                {% set mobile_booking_group_visible = true %}
+            {% endif %}
+            {% if current_user.has_permission('can_view_occupancy') %}
+                <a href="{{ url_for('occupancy.occupancy') }}">Occupancy</a>
+                {% set mobile_booking_group_visible = true %}
+            {% endif %}
+            {% if mobile_booking_group_visible %}
+                <div class="mobile-menu-separator"></div>
+            {% endif %}
+
+            <!-- Contacts Section -->
+            {% if current_user.has_permission('can_view_contacts') %}
+                <a href="{{ url_for('contacts.contacts') }}">Contacts</a>
+                <div class="mobile-menu-separator"></div>
+            {% endif %}
+
+            <!-- Management Section -->
+            {% set mobile_management_group_visible = false %}
+            {% if current_user.has_permission('can_view_units') %}
+                <a href="{{ url_for('units.manage_units') }}">Manage Units</a>
+                {% set mobile_management_group_visible = true %}
+            {% endif %}
+            {% if current_user.has_permission('can_view_manage_cleaners') %}
+                <a href="{{ url_for('cleaners.manage_cleaners') }}">Manage Cleaners</a>
+                {% set mobile_management_group_visible = true %}
+            {% endif %}
+            {% if current_user.role.name in ['Manager', 'Admin'] or current_user.is_admin %}
+                <a href="{{ url_for('user_management.manage_users') }}">Manage Users</a>
+                {% set mobile_management_group_visible = true %}
+            {% endif %}
+            {% if current_user.has_permission('can_view_jadual_pembersihan') %}
+                <a href="{{ url_for('cleaners.cleaning_schedule') }}">Jadual Pembersihan</a>
+                {% set mobile_management_group_visible = true %}
+            {% endif %}
+            {% if mobile_management_group_visible %}
+                <div class="mobile-menu-separator"></div>
+            {% endif %}
+
+            <a href="{{ url_for('auth.logout') }}">Sign Out</a>
+        {% else %}
+            <a href="{{ url_for('auth.login') }}">Sign In</a>
+        {% endif %}
+    </div>
+
+    <div class="flash-messages">
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+            <div class="flash-message flash-{{ category }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobileMenu');
+            mobileMenu.classList.toggle('active');
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const mobileMenu = document.getElementById('mobileMenu');
+            const mobileBtn = document.querySelector('.mobile-menu-btn');
+
+            if (mobileMenu && mobileBtn && !mobileMenu.contains(event.target) && !mobileBtn.contains(event.target)) {
+                mobileMenu.classList.remove('active');
+            }
+        });
+
+        // Close mobile menu on window resize if it gets too wide
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 1200) {
+                const mobileMenu = document.getElementById('mobileMenu');
+                if (mobileMenu) {
+                    mobileMenu.classList.remove('active');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

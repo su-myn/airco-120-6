@@ -1,0 +1,241 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Add New Role{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <h2>Add New Role</h2>
+
+    <form method="post" class="admin-form">
+        <div class="form-group">
+            <label for="name">Role Name</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <h3>Permissions</h3>
+
+        <div style="margin-bottom: 20px;">
+            <h4>Issues</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_issues" name="can_view_issues" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_issues">View Issues</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_issues" name="can_manage_issues" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_issues">Manage Issues</label>
+                </div>
+            </div>
+
+            <h4>Bookings</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_bookings" name="can_view_bookings" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_bookings">View Bookings</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_bookings" name="can_manage_bookings" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_bookings">Manage Bookings</label>
+                </div>
+            </div>
+
+            <h4>Calendar</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_calendar" name="can_view_calendar" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_calendar">View Calendar</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_calendar" name="can_manage_calendar" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_calendar">Manage Calendar</label>
+                </div>
+            </div>
+
+            <h4>Occupancy</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_occupancy" name="can_view_occupancy" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_occupancy">View Occupancy</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_occupancy" name="can_manage_occupancy" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_occupancy">Manage Occupancy</label>
+                </div>
+            </div>
+
+            <h4>Expenses</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_expenses" name="can_view_expenses" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_expenses">View Expenses</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_expenses" name="can_manage_expenses" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_expenses">Manage Expenses</label>
+                </div>
+            </div>
+
+            <h4>Contacts</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_contacts" name="can_view_contacts" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_contacts">View Contacts</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_contacts" name="can_manage_contacts" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_contacts">Manage Contacts</label>
+                </div>
+            </div>
+
+            <h4>Analytics</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_analytics" name="can_view_analytics" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_analytics">View Analytics</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_analytics" name="can_manage_analytics" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_analytics">Manage Analytics</label>
+                </div>
+            </div>
+
+            <h4>Units</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_units" name="can_view_units" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_units">View Units</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_units" name="can_manage_units" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_units">Manage Units</label>
+                </div>
+            </div>
+
+            <h4>Manage Cleaners</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_manage_cleaners" name="can_view_manage_cleaners" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_manage_cleaners">View Manage Cleaners</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_manage_cleaners" name="can_manage_manage_cleaners" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_manage_cleaners">Manage Manage Cleaners</label>
+                </div>
+            </div>
+
+            <h4>Jadual Pembersihan</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_view_jadual_pembersihan" name="can_view_jadual_pembersihan" style="width: auto; margin-right: 10px;">
+                    <label for="can_view_jadual_pembersihan">View Jadual Pembersihan</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_jadual_pembersihan" name="can_manage_jadual_pembersihan" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_jadual_pembersihan">Manage Jadual Pembersihan</label>
+                </div>
+            </div>
+
+            <h4>Admin Permissions</h4>
+            <div style="display: flex; gap: 20px;">
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="is_admin" name="is_admin" style="width: auto; margin-right: 10px;">
+                    <label for="is_admin">Admin Access</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="can_manage_users" name="can_manage_users" style="width: auto; margin-right: 10px;">
+                    <label for="can_manage_users">Manage Users</label>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="admin-btn">Add Role</button>
+            <a href="{{ url_for('admin.admin_roles') }}" class="admin-btn secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Add dependency logic
+    document.addEventListener('DOMContentLoaded', function() {
+        // Issues dependency
+        document.getElementById('can_manage_issues').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_issues').checked = true;
+            }
+        });
+
+        // Bookings dependency
+        document.getElementById('can_manage_bookings').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_bookings').checked = true;
+            }
+        });
+
+        // Calendar dependency
+        document.getElementById('can_manage_calendar').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_calendar').checked = true;
+            }
+        });
+
+        // Occupancy dependency
+        document.getElementById('can_manage_occupancy').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_occupancy').checked = true;
+            }
+        });
+
+        // Expenses dependency
+        document.getElementById('can_manage_expenses').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_expenses').checked = true;
+            }
+        });
+
+        // Contacts dependency
+        document.getElementById('can_manage_contacts').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_contacts').checked = true;
+            }
+        });
+
+        // Analytics dependency
+        document.getElementById('can_manage_analytics').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_analytics').checked = true;
+            }
+        });
+
+        // Units dependency
+        document.getElementById('can_manage_units').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_units').checked = true;
+            }
+        });
+
+        // Admin permissions imply all other permissions
+        document.getElementById('is_admin').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('can_view_issues').checked = true;
+                document.getElementById('can_manage_issues').checked = true;
+                document.getElementById('can_view_bookings').checked = true;
+                document.getElementById('can_manage_bookings').checked = true;
+                document.getElementById('can_view_calendar').checked = true;
+                document.getElementById('can_manage_calendar').checked = true;
+                document.getElementById('can_view_occupancy').checked = true;
+                document.getElementById('can_manage_occupancy').checked = true;
+                document.getElementById('can_view_expenses').checked = true;
+                document.getElementById('can_manage_expenses').checked = true;
+                document.getElementById('can_view_contacts').checked = true;
+                document.getElementById('can_manage_contacts').checked = true;
+                document.getElementById('can_view_analytics').checked = true;
+                document.getElementById('can_manage_analytics').checked = true;
+                document.getElementById('can_view_units').checked = true;
+                document.getElementById('can_manage_units').checked = true;
+                document.getElementById('can_manage_users').checked = true;
+            }
+        });
+    });
+</script>
+{% endblock %}

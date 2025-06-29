@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Staff Permissions - {{ staff_user.name }}{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .permissions-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+
+    .staff-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #eee;
+    }
+
+    .staff-info h1 {
+        margin: 0;
+        color: #333;
+    }
+
+    .staff-info p {
+        margin: 5px 0 0 0;
+        color: #666;
+    }
+
+    .role-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .permission-group {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+    }
+
+    .permission-group h3 {
+        margin: 0 0 15px 0;
+        color: #495057;
+        font-size: 1.1rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 8px;
+    }
+
+    .permission-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px 0;
+    }
+
+    .permission-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .permission-label {
+        font-weight: 500;
+        color: #495057;
+        flex: 1;
+    }
+
+    .permission-controls {
+        display: flex;
+        gap: 8px;
+    }
+
+    .permission-radio {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.85rem;
+    }
+
+    .permission-radio input[type="radio"] {
+        width: auto;
+        margin: 0;
+    }
+
+    .permission-radio label {
+        margin: 0;
+        font-weight: normal;
+        cursor: pointer;
+    }
+
+    .default-label {
+        color: #6c757d;
+    }
+
+    .allow-label {
+        color: #28a745;
+    }
+
+    .deny-label {
+        color: #dc3545;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-primary {
+        background-color: #ee4d2d;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary:hover {
+        background-color: #d44424;
+        text-decoration: none;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        text-decoration: none;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+        text-decoration: none;
+    }
+
+    .legend {
+        background-color: #e9ecef;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 25px;
+        font-size: 0.9rem;
+    }
+
+    .legend h4 {
+        margin: 0 0 10px 0;
+        color: #495057;
+    }
+
+    .legend-item {
+        display: inline-block;
+        margin-right: 20px;
+        margin-bottom: 5px;
+    }
+
+    .legend-dot {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: middle;
+    }
+
+    .legend-default { background-color: #6c757d; }
+    .legend-allow { background-color: #28a745; }
+    .legend-deny { background-color: #dc3545; }
+
+    @media (max-width: 768px) {
+        .permissions-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .permission-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .permission-controls {
+            width: 100%;
+            justify-content: space-around;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="permissions-container">
+    <div class="staff-header">
+        <div class="staff-info">
+            <h1>Manage Permissions - {{ staff_user.name }}</h1>
+            <p>Email: {{ staff_user.email }} | Role: <span class="role-badge">{{ staff_user.role.name }}</span></p>
+        </div>
+    </div>
+
+    <div class="legend">
+        <h4>Permission Options:</h4>
+        <div class="legend-item">
+            <span class="legend-dot legend-allow"></span>
+            <strong>Allow:</strong> Grant access to this feature
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot legend-deny"></span>
+            <strong>Deny:</strong> Block access to this feature
+        </div>
+    </div>
+
+    <form method="post">
+        <div class="permissions-grid">
+            {% for group_name, permissions in permission_groups.items() %}
+            <div class="permission-group">
+                <h3>{{ group_name }}</h3>
+                {% for permission_key, permission_name in permissions %}
+                <div class="permission-item">
+                    <div class="permission-label">{{ permission_name }}</div>
+                    <div class="permission-controls">
+                        {% set current_value = 'deny' %}
+                        {% if custom_perms %}
+                            {% set custom_value = custom_perms[permission_key] %}
+                            {% if custom_value == True %}
+                                {% set current_value = 'true' %}
+                            {% elif custom_value == False %}
+                                {% set current_value = 'false' %}
+                            {% else %}
+                                {# Use role-based default when custom_value is None #}
+                                {% if staff_user.role.name in ['Admin', 'Manager'] %}
+                                    {% set current_value = 'true' %}
+                                {% else %}
+                                    {% set current_value = 'false' %}
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            {# No custom permissions exist, use role-based defaults #}
+                            {% if staff_user.role.name in ['Admin', 'Manager'] %}
+                                {% set current_value = 'true' %}
+                            {% else %}
+                                {% set current_value = 'false' %}
+                            {% endif %}
+                        {% endif %}
+
+                        <div class="permission-radio">
+                            <input type="radio"
+                                   id="{{ permission_key }}_true"
+                                   name="{{ permission_key }}"
+                                   value="true"
+                                   {{ 'checked' if current_value == 'true' else '' }}>
+                            <label for="{{ permission_key }}_true" class="allow-label">Allow</label>
+                        </div>
+
+                        <div class="permission-radio">
+                            <input type="radio"
+                                   id="{{ permission_key }}_false"
+                                   name="{{ permission_key }}"
+                                   value="false"
+                                   {{ 'checked' if current_value == 'false' else '' }}>
+                            <label for="{{ permission_key }}_false" class="deny-label">Deny</label>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="action-buttons">
+            <div>
+                <a href="{{ url_for('user_management.manage_users') }}" class="btn-secondary">← Back to Users</a>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn-primary">Save Permissions</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Add some interactivity for better UX
+document.addEventListener('DOMContentLoaded', function() {
+    // Highlight permission groups on radio button change
+    const radioButtons = document.querySelectorAll('input[type="radio"]');
+
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const permissionItem = this.closest('.permission-item');
+
+            // Remove all highlight classes
+            permissionItem.classList.remove('permission-default', 'permission-allow', 'permission-deny');
+
+            // Add appropriate highlight class
+            if (this.value === 'true') {
+                permissionItem.classList.add('permission-allow');
+            } else if (this.value === 'false') {
+                permissionItem.classList.add('permission-deny');
+            } else {
+                permissionItem.classList.add('permission-default');
+            }
+        });
+
+        // Apply initial highlights
+        if (radio.checked) {
+            radio.dispatchEvent(new Event('change'));
+        }
+    });
+});
+</script>
+
+<style>
+/* Additional styles for permission highlighting */
+.permission-item.permission-allow {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-left: 3px solid #28a745;
+    padding-left: 15px;
+    transition: all 0.3s ease;
+}
+
+.permission-item.permission-deny {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 3px solid #dc3545;
+    padding-left: 15px;
+    transition: all 0.3s ease;
+}
+
+.permission-item.permission-default {
+    background-color: rgba(108, 117, 125, 0.1);
+    border-left: 3px solid #6c757d;
+    padding-left: 15px;
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

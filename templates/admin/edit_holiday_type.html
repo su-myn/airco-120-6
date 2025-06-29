@@ -1,0 +1,26 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Edit Holiday Type - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <h2>Edit Holiday Type</h2>
+
+    <form class="admin-form" method="post">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" value="{{ holiday_type.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="color">Color (Hex code):</label>
+            <input type="color" id="color" name="color" value="{{ holiday_type.color }}" required>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+            <a href="{{ url_for('admin.admin_holidays') }}" class="admin-btn secondary">Cancel</a>
+            <button type="submit" class="admin-btn">Update Holiday Type</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

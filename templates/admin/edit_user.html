@@ -1,0 +1,54 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <h2>Edit User</h2>
+
+    <form method="post" class="admin-form">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ user.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ user.email }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password (Leave blank to keep current)</label>
+            <input type="password" id="password" name="password">
+        </div>
+
+        <div class="form-group">
+            <label for="company_id">Company</label>
+            <select id="company_id" name="company_id" required>
+                {% for company in companies %}
+                <option value="{{ company.id }}" {{ 'selected' if company.id == user.company_id else '' }}>{{ company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="role_id">Role</label>
+            <select id="role_id" name="role_id" required>
+                {% for role in roles %}
+                <option value="{{ role.id }}" {{ 'selected' if role.id == user.role_id else '' }}>{{ role.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" style="display: flex; align-items: center;">
+            <input type="checkbox" id="is_cleaner" name="is_cleaner" style="width: auto; margin-right: 10px;" {{ 'checked' if user.is_cleaner else '' }}>
+            <label for="is_cleaner">Is Cleaner</label>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="admin-btn">Update User</button>
+            <a href="{{ url_for('admin.admin_users') }}" class="admin-btn secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

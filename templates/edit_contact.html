@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Contact - PropertyHub{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .form-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .form-title {
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 10px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .form-group textarea {
+        min-height: 50px;
+        resize: vertical;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        margin-right: 10px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .form-actions button {
+        flex: 1;
+    }
+
+    .form-actions a {
+        flex: 1;
+        text-align: center;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    .form-actions a:hover {
+        background-color: #5a6268;
+        text-decoration: none;
+    }
+
+    .required-field::after {
+        content: "*";
+        color: red;
+        margin-left: 2px;
+    }
+
+    /* Custom building input styles */
+    #custom-building-container {
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="form-title">Edit Contact</h2>
+
+    <form method="post" action="{{ url_for('contacts.edit_contact', id=contact.id) }}">
+        <div class="form-group">
+            <label for="full_name" class="required-field">Full Name</label>
+            <input type="text" id="full_name" name="full_name" value="{{ contact.full_name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="role" class="required-field">Role</label>
+            <select id="role" name="role" required>
+                <option value="">Select Role</option>
+                <option value="Aircondman" {% if contact.role == "Aircondman" %}selected{% endif %}>Aircondman</option>
+                <option value="Plumber" {% if contact.role == "Plumber" %}selected{% endif %}>Plumber</option>
+                <option value="Electrician" {% if contact.role == "Electrician" %}selected{% endif %}>Electrician</option>
+                <option value="Repairman" {% if contact.role == "Repairman" %}selected{% endif %}>Repairman</option>
+                <option value="Property Agent" {% if contact.role == "Property Agent" %}selected{% endif %}>Property Agent</option>
+                <option value="Owner" {% if contact.role == "Owner" %}selected{% endif %}>Owner</option>
+                <option value="Management" {% if contact.role == "Management" %}selected{% endif %}>Management</option>
+                <option value="Cleaner" {% if contact.role == "Cleaner" %}selected{% endif %}>Cleaner</option>
+                <option value="Operator" {% if contact.role == "Operator" %}selected{% endif %}>Operator</option>
+                <option value="Handyman" {% if contact.role == "Handyman" %}selected{% endif %}>Handyman</option>
+                <option value="Co-host" {% if contact.role == "Co-host" %}selected{% endif %}>Co-host</option>
+                <option value="Other" {% if contact.role == "Other" %}selected{% endif %}>Other</option>
+                <option value="Frequent Guest" {% if contact.role == "Frequent Guest" %}selected{% endif %}>Frequent Guest</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="text" id="phone" name="phone" value="{{ contact.phone or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="building">Building</label>
+            <select id="building" name="building" data-current-value="{{ contact.building or '' }}">
+                <option value="">Select Building</option>
+                <option value="All" {% if contact.building == "All" %}selected{% endif %}>All Buildings</option>
+                {% for building in buildings_list %}
+                    {% if building %}
+                    <option value="{{ building }}" {% if contact.building == building %}selected{% endif %}>{{ building }}</option>
+                    {% endif %}
+                {% endfor %}
+                <!-- Custom option will be added via JavaScript -->
+            </select>
+            <!-- Custom building input container will be added via JavaScript -->
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="favourite" name="favourite" {% if contact.favourite %}checked{% endif %}>
+            <label for="favourite">Mark as Favourite</label>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes">{{ contact.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="admin-btn">Update Contact</button>
+            <a href="{{ url_for('contacts.contacts') }}">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Include the custom building JavaScript -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the custom building functionality for the edit form
+        const buildingSelect = document.getElementById('building');
+        if (buildingSelect) {
+            // Add "Custom Building" option if not already present
+            let hasCustomOption = false;
+            for (let i = 0; i < buildingSelect.options.length; i++) {
+                if (buildingSelect.options[i].value === 'custom') {
+                    hasCustomOption = true;
+                    break;
+                }
+            }
+
+            if (!hasCustomOption) {
+                const customOption = document.createElement('option');
+                customOption.value = 'custom';
+                customOption.textContent = '+ Add Custom Building';
+                buildingSelect.appendChild(customOption);
+            }
+
+            // Create custom building input container
+            const formGroup = buildingSelect.closest('.form-group');
+            const customBuildingContainer = document.createElement('div');
+            customBuildingContainer.id = 'custom-building-container';
+            customBuildingContainer.style.display = 'none';
+            customBuildingContainer.innerHTML = `
+                <label for="custom-building">Custom Building</label>
+                <input type="text" id="custom-building" name="custom_building" placeholder="Enter custom building name">
+            `;
+            formGroup.appendChild(customBuildingContainer);
+
+            // Function to handle building selection change
+            function handleBuildingChange() {
+                if (buildingSelect.value === 'custom') {
+                    customBuildingContainer.style.display = 'block';
+                } else {
+                    customBuildingContainer.style.display = 'none';
+                }
+            }
+
+            // Add event listener
+            buildingSelect.addEventListener('change', handleBuildingChange);
+
+            // If the current building is not in the dropdown, select custom and show the input
+            let currentBuilding = buildingSelect.getAttribute('data-current-value');
+            if (currentBuilding) {
+                let foundInOptions = false;
+                for (let i = 0; i < buildingSelect.options.length; i++) {
+                    if (buildingSelect.options[i].value === currentBuilding) {
+                        buildingSelect.selectedIndex = i;
+                        foundInOptions = true;
+                        break;
+                    }
+                }
+
+                if (!foundInOptions && currentBuilding !== '') {
+                    // Select the custom option
+                    buildingSelect.value = 'custom';
+                    customBuildingContainer.style.display = 'block';
+                    document.getElementById('custom-building').value = currentBuilding;
+                }
+            }
+        }
+
+        // Handle form submission
+        const editContactForm = document.querySelector('form[action^="/edit_contact/"]');
+        if (editContactForm) {
+            editContactForm.addEventListener('submit', function(e) {
+                const buildingSelect = document.getElementById('building');
+                const customBuildingInput = document.getElementById('custom-building');
+
+                if (buildingSelect.value === 'custom' && customBuildingInput && customBuildingInput.value.trim()) {
+                    // Create a hidden input to override the building value
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'building';
+                    hiddenInput.value = customBuildingInput.value.trim();
+                    this.appendChild(hiddenInput);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

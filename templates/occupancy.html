@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Occupancy Calendar - PropertyHub{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .occupancy-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .month-selector {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .month-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .calendar-nav {
+        display: flex;
+        gap: 10px;
+    }
+
+    .calendar-nav-btn {
+        background-color: #4CAF50; /* Changed to green */
+        border: 1px solid #ddd;
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white; /* Better contrast with green background */
+    }
+
+    .calendar-nav-btn:hover {
+        background-color: #45a049; /* Darker green on hover */
+    }
+
+    .calendar-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .calendar-table th {
+        background-color: #f5f5f5;
+        color: #333;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+        border: 1px solid #ddd;
+    }
+
+    .calendar-table td {
+        border: 1px solid #ddd;
+        padding: 0;
+        height: 120px;
+        vertical-align: top;
+    }
+
+    .calendar-day {
+        position: relative;
+        height: 100%;
+        min-height: 120px;
+    }
+
+    .day-empty {
+        background-color: #f9f9f9;
+    }
+
+    .day-number {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 1.2rem;
+        color: #666;
+        font-weight: bold;
+    }
+
+    .occupancy-info {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #2196F3; /* Changed to blue */
+    }
+
+    .occupancy-info.high {
+        color: #1e53ff;  /* Green for high occupancy #4CAF50*/
+    }
+
+    .occupancy-info.medium {
+        color: #1e53ff;  /* Yellow for medium occupancy #FFC107*/
+    }
+
+    .occupancy-info.low {
+        color: #1e53ff;  /* Red for low occupancy #F44336 */
+    }
+
+    .holiday-container {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .holiday-banner {
+        padding: 3px 5px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: white;
+    }
+
+    .holiday-public {
+        background-color: #4CAF50;  /* Green */
+    }
+
+    .holiday-school {
+        background-color: #2196F3;  /* Blue */
+    }
+
+    .holiday-custom {
+        background-color: #9C27B0;  /* Purple */
+    }
+
+    .today {
+        background-color: #fff8e1;  /* Light yellow highlight for today */
+    }
+
+    .calendar-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .calendar-controls select {
+        padding: 8px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        flex: 1;
+        max-width: 180px; /* Limit width */
+    }
+
+    .calendar-controls button {
+        background-color: #ee4d2d;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        flex: 0 0 auto; /* Don't grow or shrink */
+    }
+
+    .calendar-controls button:hover {
+        background-color: #d44424;
+    }
+
+    .add-holiday-btn {
+        margin-top: 20px;
+        background-color: #4169E1;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .add-holiday-btn:hover {
+        background-color: #3154b1;
+        text-decoration: none;
+    }
+
+    /* Loading indicator */
+    .loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #ee4d2d;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Tooltip for holidays */
+    .tooltip {
+        position: relative;
+        display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: #333;
+        color: white;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .month-selector {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .calendar-table th,
+        .calendar-day {
+            font-size: 0.8rem;
+        }
+
+        .calendar-table td {
+            height: 100px;
+        }
+
+        .day-number {
+            font-size: 1rem;
+        }
+
+        .occupancy-info {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="occupancy-container">
+    <div class="calendar-header">
+        <div class="month-selector">
+            <h2 class="month-title">{{ month_name }} {{ year }}</h2>
+        </div>
+        <div class="calendar-nav">
+            <a href="{{ url_for('occupancy.occupancy', month=prev_month, year=prev_year) }}" class="calendar-nav-btn">Previous Month</a>
+            <a href="{{ url_for('occupancy.occupancy', month=today.month, year=today.year) }}" class="calendar-nav-btn">Current Month</a>
+            <a href="{{ url_for('occupancy.occupancy', month=next_month, year=next_year) }}" class="calendar-nav-btn">Next Month</a>
+        </div>
+    </div>
+
+    <div class="calendar-controls">
+        <select id="month-select">
+            {% for month_num, month_name in months %}
+            <option value="{{ month_num }}" {% if month_num == month %}selected{% endif %}>{{ month_name }}</option>
+            {% endfor %}
+        </select>
+        <select id="year-select">
+            {% for year_val in range(year-2, year+3) %}
+            <option value="{{ year_val }}" {% if year_val == year %}selected{% endif %}>{{ year_val }}</option>
+            {% endfor %}
+        </select>
+        <button id="go-to-date">Go</button>
+    </div>
+
+    <div id="calendar-loading" class="loading"></div>
+    <table class="calendar-table" id="calendar-table" style="display: none;">
+        <thead>
+            <tr>
+                <th>Sunday</th>
+                <th>Monday</th>
+                <th>Tuesday</th>
+                <th>Wednesday</th>
+                <th>Thursday</th>
+                <th>Friday</th>
+                <th>Saturday</th>
+            </tr>
+        </thead>
+        <tbody id="calendar-body">
+            {% for week in cal %}
+            <tr>
+                {% for day in week %}
+                {% if day != 0 %}
+                <td id="day-{{ day }}" data-day="{{ day }}">
+                    <div class="calendar-day {% if day == today.day and month == today.month and year == today.year %}today{% endif %}">
+                        <div class="day-number">{{ day }}</div>
+                        <div class="occupancy-info" id="occupancy-{{ day }}">
+                            <div class="loading"></div>
+                        </div>
+                        <div class="holiday-container" id="holidays-{{ day }}"></div>
+                    </div>
+                </td>
+                {% else %}
+                <td>
+                    <div class="calendar-day day-empty"></div>
+                </td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('occupancy.manage_holidays', type='custom') }}" class="add-holiday-btn">+ Add Custom Holiday</a>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fetch occupancy data for the current month
+        fetchOccupancyData({{ year }}, {{ month }});
+
+        // Handle the Go button
+        document.getElementById('go-to-date').addEventListener('click', function() {
+            const month = document.getElementById('month-select').value;
+            const year = document.getElementById('year-select').value;
+            window.location.href = `{{ url_for('occupancy.occupancy') }}?month=${month}&year=${year}`;
+        });
+    });
+
+    function fetchOccupancyData(year, month) {
+        const calendarTable = document.getElementById('calendar-table');
+        const loadingIndicator = document.getElementById('calendar-loading');
+
+        // Show loading indicator
+        loadingIndicator.style.display = 'block';
+        calendarTable.style.display = 'none';
+
+        // Fetch data from API
+        fetch(`/api/occupancy/${year}/${month}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update occupancy information
+                for (const [day, count] of Object.entries(data.occupancy)) {
+                    const occupancyElement = document.getElementById(`occupancy-${day}`);
+                    if (occupancyElement) {
+                        // Calculate occupancy class
+                        let occupancyClass = 'low';
+                        const occupancyRate = count / data.total_units;
+
+                        if (occupancyRate >= 0.7) {
+                            occupancyClass = 'high';
+                        } else if (occupancyRate >= 0.4) {
+                            occupancyClass = 'medium';
+                        }
+
+                        occupancyElement.innerHTML = `${count}/${data.total_units}`;
+                        occupancyElement.classList.add(occupancyClass);
+                    }
+                }
+
+                // Update holidays
+                for (const [day, holidays] of Object.entries(data.holidays)) {
+                    const holidayContainer = document.getElementById(`holidays-${day}`);
+                    if (holidayContainer) {
+                        // Clear any existing holidays
+                        holidayContainer.innerHTML = '';
+
+                        // Add each holiday
+                        holidays.forEach(holiday => {
+                            const holidayElement = document.createElement('div');
+                            holidayElement.className = `holiday-banner holiday-${holiday.type}`;
+                            holidayElement.textContent = holiday.name;
+                            holidayElement.title = holiday.name;
+                            holidayContainer.appendChild(holidayElement);
+                        });
+                    }
+                }
+
+                // Hide loading indicator, show calendar
+                loadingIndicator.style.display = 'none';
+                calendarTable.style.display = 'table';
+            })
+            .catch(error => {
+                console.error('Error fetching occupancy data:', error);
+                // Hide loading indicator, show error message
+                loadingIndicator.style.display = 'none';
+                alert('Error loading occupancy data. Please try again.');
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,1820 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses - PropertyHub{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .expenses-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+    }
+
+    .expenses-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .expenses-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+
+    .expenses-filters {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-group label {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .filter-group select,
+    .filter-group input {
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+
+    .expenses-actions {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .action-btn {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        font-weight: bold;
+        cursor: pointer;
+        background-color: #29A2F9;
+        color: #333;
+    }
+
+    .save-btn {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .export-btn {
+        background-color: #2196F3;
+        color: white;
+    }
+
+    .reload-btn {
+        background-color: #f0ad4e;
+        color: white;
+    }
+
+    .expenses-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .expenses-table th {
+        background-color: #f8f9fa;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border: 1px solid #dee2e6;
+        padding: 10px 15px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .expenses-table td {
+        border: 1px solid #dee2e6;
+        padding: 5px;
+    }
+
+    .expenses-table tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+
+    .expenses-table tr:hover {
+        background-color: #e9ecef;
+    }
+
+    .unit-column {
+        position: sticky;
+        left: 0;
+        background-color: #f8f9fa;
+        z-index: 5;
+        font-weight: bold;
+        text-align: left;
+        min-width: 120px;
+    }
+
+    .expenses-table th.unit-column {
+        background-color: #e9ecef;
+    }
+
+    .expenses-table tr:hover .unit-column {
+        background-color: #e9ecef;
+    }
+
+    .editable {
+        padding: 0;
+    }
+
+    .editable input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 5px;
+        border: none;
+        background: transparent;
+        text-align: right;
+    }
+
+    .editable input:focus {
+        outline: 2px solid #4169E1;
+        background-color: #fff;
+    }
+
+    .net-earn {
+        font-weight: bold;
+        text-align: right;
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .positive {
+        color: #2e7d32;
+    }
+
+    .negative {
+        color: #c62828;
+    }
+
+    .calculation-error {
+        background-color: #ffebee;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        display: none;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .save-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 4px;
+        background-color: #4CAF50;
+        color: white;
+        font-weight: bold;
+        z-index: 1001;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .save-message.show {
+        display: block;
+        opacity: 1;
+    }
+
+    .save-message.error {
+        background-color: #f44336;
+    }
+
+    @media (max-width: 768px) {
+        .expenses-filters {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .expenses-actions {
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            flex: 1;
+            text-align: center;
+        }
+    }
+
+    .load-btn {
+        background-color: #5bc0de;
+        color: white;
+    }
+
+    .load-repair-btn {
+        background-color: #f0ad4e;
+        color: white;
+    }
+
+    .load-replace-btn {
+        background-color: #d9534f;
+        color: white;
+    }
+
+    .auto-load-section {
+      display: flex;
+      margin-left: 20px;
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      gap: 15px;
+    }
+
+    .load-button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .load-label {
+      font-weight: bold;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .compact-btn {
+      background-color: #4169E1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      min-width: 70px;
+    }
+
+    #load-sales-btn {
+      background-color: #5bc0de;
+    }
+
+    #load-repair-btn {
+      background-color: #f0ad4e;
+    }
+
+    #load-replace-btn {
+      background-color: #d9534f;
+    }
+
+    .expenses-actions {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .expenses-actions {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .auto-load-section {
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+        justify-content: space-around;
+      }
+    }
+
+    .expenses-actions-container {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    .expenses-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .auto-load-section {
+      display: flex;
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      gap: 15px;
+      margin-left: auto; /* Push to the right */
+    }
+
+    .load-button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .load-label {
+      font-weight: bold;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .compact-btn {
+      background-color: #4169E1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      min-width: 70px;
+    }
+
+    #load-sales-btn {
+      background-color: #5bc0de;
+    }
+
+    #load-repair-btn {
+      background-color: #f0ad4e;
+    }
+
+    #load-replace-btn {
+      background-color: #d9534f;
+    }
+
+    @media (max-width: 768px) {
+      .expenses-actions-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+      }
+
+      .expenses-actions {
+        flex-wrap: wrap;
+      }
+
+      .auto-load-section {
+        margin-left: 0;
+        justify-content: space-around;
+      }
+
+      .action-btn {
+        flex: 1;
+      }
+    }
+
+
+    .input[value^="="] {
+      color: #0066cc;
+      font-style: italic;
+    }
+
+    .formula-cell {
+      color: #0066cc;
+      font-style: italic;
+    }
+
+    /* Tabs Styling */
+    .expenses-tabs {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 20px;
+    }
+
+    .expenses-tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-bottom: none;
+        margin-bottom: -1px;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+
+    .expenses-tab.active {
+        background-color: white;
+        border-color: #dee2e6;
+        border-bottom-color: white;
+        color: #ee4d2d;
+    }
+
+    .expenses-tab:hover:not(.active) {
+        background-color: #f8f9fa;
+    }
+
+    .expenses-tab-content {
+        display: none;
+    }
+
+    .expenses-tab-content.active {
+        display: block;
+    }
+
+    /* Empty tab placeholder styling */
+    .empty-tab-placeholder {
+        padding: 50px 20px;
+        text-align: center;
+        color: #6c757d;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+
+    .empty-tab-placeholder h3 {
+        margin-bottom: 10px;
+        color: #495057;
+    }
+
+    .empty-tab-placeholder p {
+        margin-bottom: 20px;
+    }
+
+    .empty-tab-icon {
+        font-size: 40px;
+        margin-bottom: 20px;
+        color: #adb5bd;
+    }
+
+    /* Reports Tab Styling */
+    .reports-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        align-items: flex-end;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .control-group label {
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .report-select {
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        min-width: 150px;
+    }
+
+    .report-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-top: 20px;
+        position: relative;
+    }
+
+    .report-table-container {
+        overflow-x: auto;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .report-table th, .report-table td {
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        text-align: right;
+    }
+
+    .report-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+
+    .report-table th.unit-column, .report-table td:first-child {
+        text-align: left;
+        position: sticky;
+        left: 0;
+        background-color: #f8f9fa;
+        z-index: 1;
+    }
+
+    .report-table tfoot tr {
+        font-weight: bold;
+        background-color: #e9ecef;
+    }
+
+    .report-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255,255,255,0.8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 5;
+    }
+
+    .report-loading .spinner {
+        margin-bottom: 15px;
+    }
+
+    .report-empty {
+        padding: 40px;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .positive-value {
+        color: #28a745;
+    }
+
+    .negative-value {
+        color: #dc3545;
+    }
+
+    #report-title {
+        margin-top: 0;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    /* Analysis Tab Styling */
+    .analysis-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        align-items: flex-end;
+    }
+
+    .analysis-container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-top: 20px;
+        position: relative;
+    }
+
+    .analysis-results h3, .analysis-results h4 {
+        margin-top: 0;
+        text-align: center;
+    }
+
+    .analysis-placeholder {
+        text-align: center;
+        padding: 40px 0;
+        color: #6c757d;
+    }
+
+    /* Analysis Tab Styling */
+    .analysis-controls {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+
+    .analysis-layout {
+        display: flex;
+        gap: 20px;
+    }
+
+    .analysis-sidebar {
+        width: 250px;
+        background-color: #f5f7f9;
+        border-radius: 8px;
+        padding: 15px;
+    }
+
+    .analysis-sidebar h3 {
+        margin-top: 0;
+        padding: 10px;
+        font-size: 18px;
+    }
+
+    .analysis-options {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .analysis-option {
+        padding: 12px 15px;
+        margin-bottom: 5px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s;
+    }
+
+    .analysis-option:hover {
+        background-color: #e6ebf1;
+    }
+
+    .analysis-option.active {
+        background-color: #4285f4;
+        color: white;
+    }
+
+    .analysis-content {
+        flex: 1;
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .metric-cards {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .metric-card {
+        flex: 1;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .metric-card h3 {
+        margin-top: 0;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .metric-card div {
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    .light-orange {
+        background-color: #fff9f0;
+        border: 1px solid #ffe4c4;
+    }
+
+    .light-red {
+        background-color: #fff0f0;
+        border: 1px solid #ffcdd2;
+    }
+
+    .light-blue {
+        background-color: #f0f5ff;
+        border: 1px solid #d1e0ff;
+    }
+
+    .chart-summary-container {
+        display: flex;
+        gap: 20px;
+    }
+
+    .chart-container {
+        flex: 3;
+        min-height: 350px;
+        position: relative;
+    }
+
+    .summary-container {
+        flex: 2;
+    }
+
+    .expense-summary-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .expense-summary-table th,
+    .expense-summary-table td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .expense-summary-table th {
+        background-color: #f5f7f9;
+    }
+
+    .expense-summary-table tfoot td {
+        border-top: 2px solid #ddd;
+    }
+
+    /* Make it responsive */
+    @media (max-width: 992px) {
+        .analysis-layout {
+            flex-direction: column;
+        }
+
+        .analysis-sidebar {
+            width: 100%;
+        }
+
+        .chart-summary-container {
+            flex-direction: column;
+        }
+
+        .metric-cards {
+            flex-direction: column;
+        }
+    }
+
+    .analysis-content.loading {
+        position: relative;
+    }
+
+    .analysis-content.loading::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+    }
+
+    .analysis-content.loading::before {
+        content: "Loading...";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 11;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .error-message {
+        text-align: center;
+        color: #dc3545;
+        padding: 20px;
+        font-weight: bold;
+    }
+
+    .pl-statement-content h2 {
+        margin-top: 0;
+        margin-bottom: 5px;
+        font-size: 24px;
+        color: #333;
+    }
+
+    .pl-statement-content h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 16px;
+        color: #6c757d;
+        font-weight: normal;
+    }
+
+    /* Make it responsive */
+    @media (max-width: 768px) {
+        .pl-statement-content .summary-cards {
+            flex-direction: column;
+        }
+
+        .pl-statement-content .summary-card {
+            margin-bottom: 15px;
+        }
+    }
+
+    .pl-statement-content {
+        position: relative;
+    }
+
+    .pl-statement-content.loading::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+    }
+
+    .pl-statement-content.loading::before {
+        content: "Loading...";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 11;
+        font-weight: bold;
+        color: #333;
+    }
+
+    /* Right align Amount(RM) column with 2 decimal places */
+    /* Right align Amount(RM) column with 2 decimal places */
+    .expense-summary-table th:nth-child(2),
+    .expense-summary-table td:nth-child(2) {
+        text-align: right;
+        padding-right: 15px;
+    }
+
+    /* Ensure the total amount at the bottom is also right-aligned */
+    #summary-total-amount {
+        text-align: right;
+    }
+
+    /* Right align Net Profit and Profit Margin columns in Income by Unit table */
+    #income-table-container th:nth-child(3),
+    #income-table-container td:nth-child(3),
+    #income-table-container th:nth-child(4),
+    #income-table-container td:nth-child(4) {
+        text-align: right;
+    }
+
+    /* Also right-align the footer totals for these columns */
+    #total-net-profit,
+    #total-profit-margin {
+        text-align: right;
+    }
+
+    /* Add sorting indicators for table headers */
+    #expenses-table th.sorted-asc::after {
+        content: " ▲";
+        font-size: 0.8em;
+    }
+
+    #expenses-table th.sorted-desc::after {
+        content: " ▼";
+        font-size: 0.8em;
+    }
+
+    /* Make headers look clickable */
+    #expenses-table th {
+        cursor: pointer;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="expenses-container">
+    <div class="expenses-header">
+        <h2 class="expenses-title">Unit Expenses</h2>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="expenses-tabs">
+        <div class="expenses-tab active" data-tab="main-data">Main Data</div>
+        <div class="expenses-tab" data-tab="reports">Reports</div>
+        <div class="expenses-tab" data-tab="charts">Charts</div>
+        <div class="expenses-tab" data-tab="analysis">Analysis</div>
+    </div>
+
+    <!-- Main Data Tab -->
+    <div id="main-data-tab" class="expenses-tab-content active">
+        <div class="expenses-filters">
+            <div class="filter-group">
+                <label for="month-filter">Month:</label>
+                <input type="month" id="month-filter" name="month-filter" value="{{ current_month }}">
+            </div>
+
+            <div class="filter-group">
+                <label for="building-filter">Building:</label>
+                <select id="building-filter" name="building-filter">
+                    <option value="all">All Buildings</option>
+                    {% for building in buildings %}
+                        <option value="{{ building }}">{{ building }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Split the action buttons into two separate sections -->
+        <div class="expenses-actions-container">
+          <div class="expenses-actions">
+            <button id="save-btn" class="action-btn save-btn">
+              <i class="fas fa-save"></i> Save All
+            </button>
+            <button id="reload-btn" class="action-btn reload-btn">
+              <i class="fas fa-undo"></i> Undo All Changes
+            </button>
+          </div>
+
+          <div class="auto-load-section">
+            <div class="load-button-container">
+              <span class="load-label">Sales</span>
+              <button id="load-sales-btn" class="compact-btn">
+                <i class="fas fa-download"></i> Load
+              </button>
+            </div>
+
+            <div class="load-button-container">
+              <span class="load-label">Repair</span>
+              <button id="load-repair-btn" class="compact-btn">
+                <i class="fas fa-download"></i> Load
+              </button>
+            </div>
+
+            <div class="load-button-container">
+              <span class="load-label">Replace</span>
+              <button id="load-replace-btn" class="compact-btn">
+                <i class="fas fa-download"></i> Load
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+            <table id="expenses-table" class="expenses-table">
+                <thead>
+                    <tr>
+                        <th class="unit-column">Unit</th>
+                        <th>Sales</th>
+                        <th>Rental</th>
+                        <th>Electricity</th>
+                        <th>Water</th>
+                        <th>Sewage</th>
+                        <th>Internet</th>
+                        <th>Cleaner</th>
+                        <th>Laundry</th>
+                        <th>Supplies</th>
+                        <th>Repair</th>
+                        <th>Replace</th>
+                        <th>Other</th>
+                        <th>Net Earn</th>
+                    </tr>
+                </thead>
+                <tbody id="expenses-data">
+                    <!-- Table data will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Reports Tab -->
+    <div id="reports-tab" class="expenses-tab-content">
+        <div class="reports-controls">
+            <div class="control-group">
+                <label for="report-data-field">Display Value:</label>
+                <select id="report-data-field" class="report-select">
+                    <option value="net_earn">Net Earn</option>
+                    <option value="sales">Sales</option>
+                    <option value="rental">Rental</option>
+                    <option value="electricity">Electricity</option>
+                    <option value="water">Water</option>
+                    <option value="sewage">Sewage</option>
+                    <option value="internet">Internet</option>
+                    <option value="cleaner">Cleaner</option>
+                    <option value="laundry">Laundry</option>
+                    <option value="supplies">Supplies</option>
+                    <option value="repair">Repair</option>
+                    <option value="replace">Replace</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="report-year">Year:</label>
+                <select id="report-year" class="report-select">
+                    <!-- Years will be populated dynamically -->
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="report-building">Building:</label>
+                <select id="report-building" class="report-select">
+                    <option value="all">All Buildings</option>
+                    {% for building in buildings %}
+                        <option value="{{ building }}">{{ building }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- REMOVED: Generate Report button -->
+        </div>
+
+        <div class="report-container">
+            <h3 id="report-title">Unit Performance by Month</h3>
+            <div class="report-table-container">
+                <table id="report-table" class="report-table">
+                    <thead>
+                        <tr>
+                            <th class="unit-column">Unit</th>
+                            <th>Jan</th>
+                            <th>Feb</th>
+                            <th>Mar</th>
+                            <th>Apr</th>
+                            <th>May</th>
+                            <th>Jun</th>
+                            <th>Jul</th>
+                            <th>Aug</th>
+                            <th>Sep</th>
+                            <th>Oct</th>
+                            <th>Nov</th>
+                            <th>Dec</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-data">
+                        <!-- Report data will be populated dynamically -->
+                    </tbody>
+                    <tfoot>
+                        <tr id="monthly-totals">
+                            <th>Total</th>
+                            <td data-month="1">0.00</td>
+                            <td data-month="2">0.00</td>
+                            <td data-month="3">0.00</td>
+                            <td data-month="4">0.00</td>
+                            <td data-month="5">0.00</td>
+                            <td data-month="6">0.00</td>
+                            <td data-month="7">0.00</td>
+                            <td data-month="8">0.00</td>
+                            <td data-month="9">0.00</td>
+                            <td data-month="10">0.00</td>
+                            <td data-month="11">0.00</td>
+                            <td data-month="12">0.00</td>
+                            <td id="grand-total">0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div id="report-loading" class="report-loading">
+                <div class="spinner"></div>
+                <p>Loading report data...</p>
+            </div>
+            <div id="report-empty" class="report-empty" style="display: none;">
+                <p>No data available for the selected criteria.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Tab -->
+    <div id="charts-tab" class="expenses-tab-content">
+        <!-- The chartsTab content will be replaced by the JavaScript code -->
+        <div class="empty-tab-placeholder">
+            <div class="empty-tab-icon">📈</div>
+            <h3>Loading Charts...</h3>
+            <p>If you see this message for more than a few seconds, please make sure JavaScript is enabled in your browser.</p>
+        </div>
+    </div>
+
+    <!-- Analysis Tab -->
+    <!-- Analysis Tab -->
+    <div id="analysis-tab" class="expenses-tab-content">
+        <div class="analysis-controls">
+            <div class="control-group">
+                <select id="analysis-month-year" class="report-select">
+                    <option value="2025-01">January 2025</option>
+                    <option value="2025-02">February 2025</option>
+                    <option value="2025-03">March 2025</option>
+                    <option value="2025-04">April 2025</option>
+                    <option value="2025-05">May 2025</option>
+                    <option value="2025-06">June 2025</option>
+                    <option value="2025-07">July 2025</option>
+                    <option value="2025-08">August 2025</option>
+                    <option value="2025-09">September 2025</option>
+                    <option value="2025-10">October 2025</option>
+                    <option value="2025-11">November 2025</option>
+                    <option value="2025-12">December 2025</option>
+                    <option value="2026-01">January 2026</option>
+                    <option value="2026-02">February 2026</option>
+                    <option value="2026-03">March 2026</option>
+                    <option value="2026-04">April 2026</option>
+                    <option value="2026-05">May 2026</option>
+                    <option value="2026-06">June 2026</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <select id="analysis-unit" class="report-select">
+                    <option value="all">All Units</option>
+                    <!-- Units will be populated dynamically -->
+                </select>
+            </div>
+            <div class="control-group">
+                <select id="analysis-building" class="report-select">
+                    <option value="all">All Buildings</option>
+                    {% for building in buildings %}
+                        <option value="{{ building }}">{{ building }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- REMOVED: Refresh button -->
+        </div>
+
+        <div class="analysis-layout">
+            <!-- Sidebar with analysis options -->
+            <div class="analysis-sidebar">
+                <h3>Available Analysis</h3>
+                <div class="analysis-options">
+                    <div class="analysis-option active" data-analysis="expenses-breakdown">
+                        Expenses Breakdown
+                    </div>
+                    <div class="analysis-option" data-analysis="pl-statement">
+                        P&L Statement
+                    </div>
+                    <div class="analysis-option" data-analysis="yoy-comparison">
+                        YoY Comparison
+                    </div>
+                    <div class="analysis-option" data-analysis="roi-analysis">
+                        ROI Analysis
+                    </div>
+                    <div class="analysis-option" data-analysis="income-by-unit">
+                        Income by Unit
+                    </div>
+                    <!-- Add more analysis options here if needed -->
+                </div>
+            </div>
+
+            <!-- Main analysis content area -->
+            <div class="analysis-content">
+                <h2>Expense Breakdown</h2>
+
+                <!-- Cards row -->
+                <div class="metric-cards">
+                    <div class="metric-card light-orange">
+                        <h3>Total Expenses</h3>
+                        <div id="total-expenses-value">RM 0</div>
+                        <div id="expenses-change" style="font-size: 0.9rem; margin-top: 5px;"></div>
+                    </div>
+                    <div class="metric-card light-red">
+                        <h3>Top Expense</h3>
+                        <div id="top-expense-name" style="font-size: 1.5rem; font-weight: bold;">-</div>
+                        <div id="top-expense-amount" style="font-size: 0.9rem; margin-top: 5px;">-</div>
+                    </div>
+                    <div class="metric-card light-blue">
+                        <h3>Avg. Expense per Unit</h3>
+                        <div id="avg-expense-value">RM 0</div>
+                        <div id="units-count" style="font-size: 0.9rem; margin-top: 5px;">0 units</div>
+                    </div>
+                </div>
+
+                <!-- Chart and summary section -->
+                <div class="chart-summary-container">
+                    <div class="chart-container">
+                        <canvas id="expense-pie-chart"></canvas>
+                    </div>
+
+                    <div class="summary-container">
+                        <h3>Expense Summary</h3>
+                        <table class="expense-summary-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Amount(RM)</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expense-summary-tbody">
+                                <!-- Summary rows will be added dynamically -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td><strong>Total Expenses</strong></td>
+                                    <td id="summary-total-amount"><strong>0</strong></td>
+                                    <td><strong>100%</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Add this after the chart-summary-container div -->
+                <div class="top-units-section" style="margin-top: 30px;">
+                    <h3>Top 10 Expense Units</h3>
+                    <div class="top-units-chart-container" style="height: 300px; margin-top: 15px;">
+                        <canvas id="top-units-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add this after the existing analysis content -->
+            <div class="analysis-content pl-statement-content" style="display: none;">
+                <h2 id="pl-statement-title">Monthly Profit & Loss Statement</h2>
+                <h3 id="pl-statement-subtitle">January 2025 | All Units</h3>
+
+                <!-- Summary Cards -->
+                <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                    <!-- Revenue Card -->
+                    <div style="flex: 1; background-color: #f5f7f9; padding: 20px; border-radius: 8px;">
+                        <div style="color: #6c757d; margin-bottom: 10px;">Total Revenue</div>
+                        <div style="font-size: 28px; font-weight: bold; color: #4CAF50;">RM<span id="pl-total-revenue">253,600</span></div>
+                        <div style="color: #4CAF50; font-size: 14px; margin-top: 5px;">+<span id="pl-revenue-change">5.2</span>% vs <span id="pl-revenue-prev-month">Dec</span></div>
+                    </div>
+
+                    <!-- Expenses Card -->
+                    <div style="flex: 1; background-color: #f5f7f9; padding: 20px; border-radius: 8px;">
+                        <div style="color: #6c757d; margin-bottom: 10px;">Total Expenses</div>
+                        <div style="font-size: 28px; font-weight: bold; color: #FF5722;">RM<span id="pl-total-expenses">127,320</span></div>
+                        <div style="color: #FF5722; font-size: 14px; margin-top: 5px;"><span id="pl-expenses-change">2.1</span>% vs <span id="pl-expenses-prev-month">Dec</span></div>
+                    </div>
+
+                    <!-- Net Income Card -->
+                    <div style="flex: 1; background-color: #f5f7f9; padding: 20px; border-radius: 8px;">
+                        <div style="color: #6c757d; margin-bottom: 10px;">Net Income</div>
+                        <div style="font-size: 28px; font-weight: bold; color: #2196F3;">RM<span id="pl-net-income">126,280</span></div>
+                        <div style="color: #2196F3; font-size: 14px; margin-top: 5px;"><span id="pl-income-change">8.3</span>% vs <span id="pl-income-prev-month">Dec</span></div>
+                    </div>
+                </div>
+
+                <!-- P&L Statement Table -->
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <thead>
+                        <tr style="background-color: #f5f7f9;">
+                            <th style="padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd;">Category</th>
+                            <th style="padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd;">Amount (RM)</th>
+                            <th style="padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd;">% of Total</th>
+                            <th style="padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd;">vs Previous Month</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pl-table-body">
+                        <!-- This will be populated dynamically with real data -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- YoY Comparison -->
+            <div class="analysis-content yoy-comparison-content" style="display: none;">
+                <h2 id="yoy-comparison-title">Year-over-Year Comparison</h2>
+                <h3 id="yoy-comparison-subtitle">January 2025 vs January 2024 | All Units</h3>
+
+                <!-- Summary Cards -->
+                <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                    <!-- Revenue Card -->
+                    <div style="flex: 1; background-color: #f8fff8; padding: 20px; border-radius: 8px; border: 1px solid #e0f0e0;">
+                        <div style="text-align: center; margin-bottom: 10px; font-weight: bold;">Total Revenue</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #4CAF50; text-align: center;">
+                            <span id="yoy-revenue-change">+8.5%</span>
+                        </div>
+                        <div style="text-align: center; margin-top: 10px;">
+                            RM<span id="yoy-current-revenue">0</span> vs RM<span id="yoy-previous-revenue">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Expenses Card -->
+                    <div style="flex: 1; background-color: #fff8f8; padding: 20px; border-radius: 8px; border: 1px solid #f0e0e0;">
+                        <div style="text-align: center; margin-bottom: 10px; font-weight: bold;">Total Expenses</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #F44336; text-align: center;">
+                            <span id="yoy-expenses-change">+4.2%</span>
+                        </div>
+                        <div style="text-align: center; margin-top: 10px;">
+                            RM<span id="yoy-current-expenses">0</span> vs RM<span id="yoy-previous-expenses">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Net Profit Card -->
+                    <div style="flex: 1; background-color: #f8f8ff; padding: 20px; border-radius: 8px; border: 1px solid #e0e0f0;">
+                        <div style="text-align: center; margin-bottom: 10px; font-weight: bold;">Net Profit</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #3F51B5; text-align: center;">
+                            <span id="yoy-profit-change">+14.1%</span>
+                        </div>
+                        <div style="text-align: center; margin-top: 10px;">
+                            RM<span id="yoy-current-profit">0</span> vs RM<span id="yoy-previous-profit">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Trend Chart -->
+                <div style="margin-top: 30px;">
+                    <h3>Monthly Trend Comparison</h3>
+                    <div style="height: 350px;">
+                        <canvas id="yoy-trend-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROI Analysis Content -->
+            <div class="analysis-content roi-analysis-content" style="display: none;">
+                <h2 id="roi-analysis-title">ROI Analysis</h2>
+                <h3 id="roi-analysis-subtitle">January 2025 | All Units</h3>
+
+                <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
+                    <div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; display: inline-block;">
+                        <strong>ROI = (Net Profit / Rental) x 100%</strong>
+                        <div style="margin-top: 5px; font-size: 0.9rem; display: flex; gap: 10px;">
+                            <div><span style="color: #28a745;">>= 50% Excellent</span></div>
+                            <div><span style="color: #007bff;">>= 20% Good</span></div>
+                            <div><span style="color: #fd7e14;">>= 5% Average</span></div>
+                            <div><span style="color: #dc3545;">< 5% Poor</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa;">
+                                <th style="padding: 12px 15px; text-align: left; border-bottom: 1px solid #dee2e6; cursor: pointer;"
+                                    onclick="sortROITable('unit')" data-sort="unit">
+                                    Unit <span id="sort-unit-indicator"></span>
+                                </th>
+                                <th style="padding: 12px 15px; text-align: right; border-bottom: 1px solid #dee2e6; cursor: pointer;"
+                                    onclick="sortROITable('profit')" data-sort="profit">
+                                    Net Profit <span id="sort-profit-indicator"></span>
+                                </th>
+                                <th style="padding: 12px 15px; text-align: right; border-bottom: 1px solid #dee2e6; cursor: pointer;"
+                                    onclick="sortROITable('rental')" data-sort="rental">
+                                    Rental <span id="sort-rental-indicator"></span>
+                                </th>
+                                <th style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #dee2e6; cursor: pointer;"
+                                    onclick="sortROITable('roi')" data-sort="roi">
+                                    ROI (%) <span id="sort-roi-indicator"></span>
+                                </th>
+                                <th style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #dee2e6; cursor: pointer;"
+                                    onclick="sortROITable('performance')" data-sort="performance">
+                                    Performance <span id="sort-performance-indicator"></span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="roi-analysis-tbody">
+                            <!-- Will be populated dynamically -->
+                        </tbody>
+                        <tfoot>
+                            <tr style="background-color: #f0f0f0;">
+                                <th style="padding: 12px 15px; text-align: left; border-top: 2px solid #dee2e6;">All Units</th>
+                                <th id="roi-total-profit" style="padding: 12px 15px; text-align: right; border-top: 2px solid #dee2e6;">RM0</th>
+                                <th id="roi-total-rental" style="padding: 12px 15px; text-align: right; border-top: 2px solid #dee2e6;">RM0</th>
+                                <th id="roi-total-percentage" style="padding: 12px 15px; text-align: center; border-top: 2px solid #dee2e6;">0%</th>
+                                <th id="roi-total-performance" style="padding: 12px 15px; text-align: center; border-top: 2px solid #dee2e6;">-</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Income by Unit-->
+            <div class="analysis-content income-by-unit-content" style="display: none;">
+                <h2 id="income-by-unit-title">Income By Unit</h2>
+                <h3 id="income-by-unit-subtitle">January 2025 | All Units</h3>
+
+                <div class="chart-controls" style="margin-bottom: 20px;">
+                    <div style="display: flex; gap: 15px;">
+                        <div style="margin-left: auto;">
+                            <div id="income-chart-view-options" class="btn-group">
+                                <button id="income-chart-view" class="btn btn-primary active">Chart</button>
+                                <button id="income-table-view" class="btn btn-secondary">Table</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="income-chart-container" style="height: 500px; margin-top: 15px;">
+                    <canvas id="income-by-unit-chart"></canvas>
+                </div>
+
+                <div id="income-table-container" style="display: none; margin-top: 15px;">
+                    <table class="expense-summary-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Unit</th>
+                                <th>Sales Income</th>
+                                <th>Net Profit</th>
+                                <th>Profit Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="income-table-body">
+                            <!-- Table data will be populated dynamically -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td><strong>Total</strong></td>
+                                <td id="total-sales-income"><strong>0</strong></td>
+                                <td id="total-net-profit"><strong>0</strong></td>
+                                <td id="total-profit-margin"><strong>0%</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="save-message" class="save-message">Data saved successfully</div>
+</div>
+
+<!-- Include the expenses.js script -->
+<script src="{{ url_for('static', filename='js/expenses.js') }}"></script>
+
+<!-- Add the Chart.js library if not already included -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<!-- Include the expenses chart script -->
+<script src="{{ url_for('static', filename='js/expenses-chart.js') }}"></script>
+
+
+
+<!-- Add a simple inline script for any page-specific initialization -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // The main functionality is handled by the ExpensesManager class in expenses.js
+
+        // Set up tab switching
+        const tabs = document.querySelectorAll('.expenses-tab');
+        const tabContents = document.querySelectorAll('.expenses-tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Get the tab id
+                const tabId = this.getAttribute('data-tab');
+
+                // Remove active class from all tabs and contents
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                // Add active class to selected tab and content
+                this.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+
+                // ADD THIS: Load data when switching to Analysis tab
+                if (tabId === 'analysis') {
+                    // Small delay to ensure the tab content is visible
+                    setTimeout(() => {
+                        const activeAnalysisOption = document.querySelector('.analysis-option.active');
+                        if (activeAnalysisOption) {
+                            const analysisType = activeAnalysisOption.getAttribute('data-analysis');
+                            if (analysisType === 'expenses-breakdown') {
+                                updateAnalysis();
+                            } else if (analysisType === 'pl-statement') {
+                                updatePnLStatement();
+                            } else if (analysisType === 'yoy-comparison') {
+                                updateYoYComparison();
+                            } else if (analysisType === 'roi-analysis') {
+                                updateROIAnalysis();
+                            } else if (analysisType === 'income-by-unit') {
+                                updateIncomeByUnitAnalysis();
+                            }
+                        }
+                    }, 100);
+                }
+            });
+        });
+
+        // Reports Tab functionality
+        initializeReportsTab();
+    });
+
+    // In expenses.html, update the initializeReportsTab function
+    function initializeReportsTab() {
+        // Fetch available years from expense data
+        fetch('/api/expenses/years')
+            .then(response => response.json())
+            .then(data => {
+                const yearSelect = document.getElementById('report-year');
+                yearSelect.innerHTML = ''; // Clear existing options
+
+                // Add available years to dropdown
+                const years = data.years || [];
+                const currentYear = new Date().getFullYear();
+
+                // If no years with data, add current year and past 2 years
+                if (years.length === 0) {
+                    for (let year = currentYear; year >= currentYear - 2; year--) {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        yearSelect.appendChild(option);
+                    }
+                } else {
+                    // Sort years in descending order
+                    years.sort((a, b) => b - a);
+
+                    // Add years with data
+                    years.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        yearSelect.appendChild(option);
+                    });
+                }
+
+                // SET DEFAULT TO CURRENT YEAR
+                // Check if current year exists in the dropdown
+                const currentYearOption = Array.from(yearSelect.options).find(option =>
+                    parseInt(option.value) === currentYear
+                );
+
+                if (currentYearOption) {
+                    // If current year exists, select it
+                    yearSelect.value = currentYear;
+                } else {
+                    // If current year doesn't exist, select the first (most recent) year
+                    if (yearSelect.options.length > 0) {
+                        yearSelect.value = yearSelect.options[0].value;
+                    }
+                }
+
+                // ADD AUTO-REFRESH EVENT LISTENERS
+                document.getElementById('report-data-field').addEventListener('change', generateUnitMonthReport);
+                document.getElementById('report-year').addEventListener('change', generateUnitMonthReport);
+                document.getElementById('report-building').addEventListener('change', generateUnitMonthReport);
+
+                // REMOVED: Generate report button setup since button is removed
+
+                // Generate report on initial load
+                setTimeout(() => {
+                    generateUnitMonthReport();
+                }, 500);
+            })
+            .catch(error => {
+                console.error('Error fetching years:', error);
+
+                // Fallback to default behavior
+                const yearSelect = document.getElementById('report-year');
+                const currentYear = new Date().getFullYear();
+
+                for (let year = currentYear; year >= currentYear - 2; year--) {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                }
+
+                // SET DEFAULT TO CURRENT YEAR IN FALLBACK TOO
+                yearSelect.value = currentYear;
+
+                // ADD AUTO-REFRESH EVENT LISTENERS IN FALLBACK
+                document.getElementById('report-data-field').addEventListener('change', generateUnitMonthReport);
+                document.getElementById('report-year').addEventListener('change', generateUnitMonthReport);
+                document.getElementById('report-building').addEventListener('change', generateUnitMonthReport);
+
+                // REMOVED: Generate report button setup since button is removed
+
+                // Generate report on initial load
+                setTimeout(() => {
+                    generateUnitMonthReport();
+                }, 500);
+            });
+    }
+
+
+    // Update the collectReportData function to fetch real data from the API
+    function collectReportData(year, dataField, buildingFilter = 'all') {
+        return new Promise((resolve, reject) => {
+            // Show loading indicator
+            document.getElementById('report-loading').style.display = 'flex';
+
+            // Fetch data from the API
+            fetch(`/api/expenses/yearly?year=${year}&building=${buildingFilter}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch data');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Process the API response
+                    const units = data.units || [];
+                    const expensesData = data.expenses || {};
+
+                    // Initialize the report data structure
+                    const reportData = {
+                        units: units,
+                        data: {},
+                        totals: {
+                            byMonth: {},
+                            byUnit: {},
+                            grandTotal: 0
+                        }
+                    };
+
+                    // Initialize monthly totals
+                    for (let month = 1; month <= 12; month++) {
+                        reportData.totals.byMonth[month] = 0;
+                    }
+
+                    // Process each unit
+                    units.forEach(unit => {
+                        const unitId = unit.id;
+                        reportData.data[unitId] = {};
+                        reportData.totals.byUnit[unitId] = 0;
+
+                        // For each month
+                        for (let month = 1; month <= 12; month++) {
+                            // Get the expense data for this unit and month
+                            const monthData = expensesData[unitId]?.[month] || {};
+                            let value = 0;
+
+                            // Calculate the requested value
+                            if (dataField === 'net_earn') {
+                                // Calculate net earn from all fields
+                                const sales = parseFloat(monthData.sales || 0);
+                                const costs = parseFloat(monthData.rental || 0) +
+                                        parseFloat(monthData.electricity || 0) +
+                                        parseFloat(monthData.water || 0) +
+                                        parseFloat(monthData.sewage || 0) +
+                                        parseFloat(monthData.internet || 0) +
+                                        parseFloat(monthData.cleaner || 0) +
+                                        parseFloat(monthData.laundry || 0) +
+                                        parseFloat(monthData.supplies || 0) +
+                                        parseFloat(monthData.repair || 0) +
+                                        parseFloat(monthData.replace || 0) +
+                                        parseFloat(monthData.other || 0);
+
+                                value = sales - costs;
+                            } else {
+                                // Get the specific field value
+                                value = parseFloat(monthData[dataField] || 0);
+                            }
+
+                            // Store the value for this month
+                            reportData.data[unitId][month] = value;
+
+                            // Update totals
+                            reportData.totals.byMonth[month] += value;
+                            reportData.totals.byUnit[unitId] += value;
+                            reportData.totals.grandTotal += value;
+                        }
+                    });
+
+                    resolve(reportData);
+                })
+                .catch(error => {
+                    console.error('Error fetching yearly expense data:', error);
+                    reject(error);
+                });
+        });
+    }
+
+    // Update the generateUnitMonthReport function to remove the mock data note
+    function generateUnitMonthReport() {
+        const dataField = document.getElementById('report-data-field').value;
+        const year = document.getElementById('report-year').value;
+        const reportTitle = document.getElementById('report-title');
+        const reportLoading = document.getElementById('report-loading');
+        const reportEmpty = document.getElementById('report-empty');
+
+        // Update report title
+        const fieldName = document.getElementById('report-data-field').options[
+            document.getElementById('report-data-field').selectedIndex
+        ].text;
+        reportTitle.textContent = `${fieldName} by Month (${year})`;
+
+        // Get building filter
+        const buildingFilter = document.getElementById('report-building').value;
+
+        // Show loading indicator
+        reportLoading.style.display = 'flex';
+        reportEmpty.style.display = 'none';
+
+        // Remove any existing note
+        const existingNote = document.querySelector('.report-note');
+        if (existingNote) {
+            existingNote.remove();
+        }
+
+        // Collect the real data with building filter
+        collectReportData(year, dataField, buildingFilter)
+            .then(reportData => {
+                // Hide loading
+                reportLoading.style.display = 'none';
+
+                // Check if we have data
+                if (reportData.units.length === 0) {
+                    reportEmpty.style.display = 'block';
+                    return;
+                }
+
+                // Render the report
+                renderUnitMonthReport(reportData);
+            })
+            .catch(error => {
+                console.error('Error generating report:', error);
+                reportLoading.style.display = 'none';
+                reportEmpty.style.display = 'block';
+                reportEmpty.innerHTML = '<p>Error generating report. Please try again.</p>';
+            });
+    }
+
+    // Add helper functions to format currency values
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('en', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    // Update the renderUnitMonthReport function to improve the UI
+    function renderUnitMonthReport(reportData) {
+        const tableBody = document.getElementById('report-data');
+        const monthlyTotalsRow = document.getElementById('monthly-totals');
+        const grandTotalCell = document.getElementById('grand-total');
+
+        // Clear existing data
+        tableBody.innerHTML = '';
+
+        // Render unit rows
+        reportData.units.forEach(unit => {
+            const unitId = unit.id;
+            const row = document.createElement('tr');
+
+            // Unit cell
+            const unitCell = document.createElement('td');
+            unitCell.textContent = unit.unit_number;
+            row.appendChild(unitCell);
+
+            // Month cells
+            let unitTotal = 0;
+            for (let month = 1; month <= 12; month++) {
+                const value = reportData.data[unitId][month] || 0;
+                unitTotal += value;
+
+                const cell = document.createElement('td');
+                cell.textContent = formatCurrency(value);
+
+                // Add styling for positive/negative values
+                if (value > 0) {
+                    cell.classList.add('positive-value');
+                } else if (value < 0) {
+                    cell.classList.add('negative-value');
+                }
+
+                row.appendChild(cell);
+            }
+
+            // Unit total cell
+            const totalCell = document.createElement('td');
+            totalCell.textContent = formatCurrency(unitTotal);
+            if (unitTotal > 0) {
+                totalCell.classList.add('positive-value');
+            } else if (unitTotal < 0) {
+                totalCell.classList.add('negative-value');
+            }
+            row.appendChild(totalCell);
+
+            tableBody.appendChild(row);
+        });
+
+        // Update monthly totals row
+        for (let month = 1; month <= 12; month++) {
+            const total = reportData.totals.byMonth[month] || 0;
+            const cell = monthlyTotalsRow.querySelector(`td[data-month="${month}"]`);
+
+            if (cell) {
+                cell.textContent = formatCurrency(total);
+                cell.className = ''; // Clear previous classes
+                if (total > 0) {
+                    cell.classList.add('positive-value');
+                } else if (total < 0) {
+                    cell.classList.add('negative-value');
+                }
+            }
+        }
+
+        // Update grand total
+        grandTotalCell.textContent = formatCurrency(reportData.totals.grandTotal);
+        grandTotalCell.className = ''; // Clear previous classes
+        if (reportData.totals.grandTotal > 0) {
+            grandTotalCell.classList.add('positive-value');
+        } else if (reportData.totals.grandTotal < 0) {
+            grandTotalCell.classList.add('negative-value');
+        }
+
+    }
+</script>
+
+
+{% endblock %}
