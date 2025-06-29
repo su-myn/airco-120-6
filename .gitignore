@@ -126,4 +126,4 @@ Thumbs.db
 propertyhub.db
 
 # Migrations (optional - you might want to include these)
-migrations/
+migration
