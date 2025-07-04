@@ -68,7 +68,6 @@ def occupancy():
                            next_year=next_year,
                            today=today)
 
-
 @occupancy_bp.route('/api/occupancy/<int:year>/<int:month>')
 @login_required
 def get_occupancy_data(year, month):
@@ -83,6 +82,22 @@ def get_occupancy_data(year, month):
             "holidays": {}
         })
 
+    # Filter for ACTIVE units only
+    accessible_active_units = Unit.query.filter(
+        Unit.id.in_(accessible_unit_ids),
+        Unit.is_occupied == True
+    ).all()
+
+    accessible_active_unit_ids = [unit.id for unit in accessible_active_units]
+
+    if not accessible_active_unit_ids:
+        # If no accessible active units, return empty data
+        return jsonify({
+            "occupancy": {},
+            "total_units": 0,
+            "holidays": {}
+        })
+
     # Get the first and last day of the month
     first_day = date(year, month, 1)
     # Get the last day of the month
@@ -91,10 +106,10 @@ def get_occupancy_data(year, month):
     else:
         last_day = date(year, month + 1, 1) - timedelta(days=1)
 
-    # Get bookings that overlap with this month for accessible units only
+    # Get bookings that overlap with this month for accessible ACTIVE units only
     bookings = BookingForm.query.filter(
         BookingForm.company_id == current_user.company_id,
-        BookingForm.unit_id.in_(accessible_unit_ids),
+        BookingForm.unit_id.in_(accessible_active_unit_ids),
         BookingForm.check_in_date <= last_day,
         BookingForm.check_out_date >= first_day
     ).all()
@@ -117,8 +132,8 @@ def get_occupancy_data(year, month):
                 occupancy_data[current_date.day] += 1
             current_date += timedelta(days=1)
 
-    # Get total accessible units
-    total_units = len(accessible_unit_ids)
+    # Get total accessible ACTIVE units
+    total_units = len(accessible_active_unit_ids)
 
     # Get holidays for this month (existing holiday logic remains the same)
     holiday_data = {}

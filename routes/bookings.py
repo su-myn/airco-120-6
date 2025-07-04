@@ -91,11 +91,12 @@ def bookings():
     today = datetime.now().date()
     tomorrow = today + timedelta(days=1)
 
-    # Get accessible unit IDs for filtering
-    accessible_unit_ids = [unit.id for unit in units]
+    # Get accessible unit IDs for filtering - ONLY ACTIVE UNITS
+    accessible_active_units = get_accessible_units_query().filter(Unit.is_occupied == True).all()
+    accessible_unit_ids = [unit.id for unit in accessible_active_units]
 
     if not accessible_unit_ids:
-        # If no accessible units, return zero stats
+        # If no accessible active units, return zero stats
         stats = {
             'unit_total': 0,
             'occupancy_current': 0,
@@ -109,7 +110,7 @@ def bookings():
         }
         return render_template('bookings.html', bookings=bookings_list, units=units, stats=stats, active_filter=None)
 
-    # Calculate total accessible units
+    # Calculate total accessible ACTIVE units only
     unit_total = len(accessible_unit_ids)
 
     # Calculate occupancy today (units where check-in <= today < check-out)
@@ -188,6 +189,7 @@ def bookings():
     return render_template('bookings.html', bookings=bookings_list, units=units, stats=stats, active_filter=None)
 
 
+
 # Replace the existing bookings_filter() function with this updated version:
 @bookings_bp.route('/bookings/<filter_type>')
 @login_required
@@ -195,14 +197,17 @@ def bookings():
 def bookings_filter(filter_type):
     # Get accessible units for this user
     units = get_accessible_units_query().all()
-    accessible_unit_ids = [unit.id for unit in units]
+
+    # Get accessible ACTIVE units only for calculations
+    accessible_active_units = get_accessible_units_query().filter(Unit.is_occupied == True).all()
+    accessible_unit_ids = [unit.id for unit in accessible_active_units]
 
     # Calculate analytics for the dashboard
     today = datetime.now().date()
     tomorrow = today + timedelta(days=1)
 
     if not accessible_unit_ids:
-        # If no accessible units, return empty results
+        # If no accessible active units, return empty results
         stats = {
             'unit_total': 0,
             'occupancy_current': 0,
@@ -218,10 +223,10 @@ def bookings_filter(filter_type):
                                bookings=[],
                                units=units,
                                stats=stats,
-                               filter_message="No accessible units",
+                               filter_message="No accessible active units",
                                active_filter=filter_type)
 
-    # Calculate all the stats (same as in regular bookings route but filtered)
+    # Calculate all the stats using only active units
     unit_total = len(accessible_unit_ids)
 
     occupancy_current = BookingForm.query.filter(
@@ -276,7 +281,7 @@ def bookings_filter(filter_type):
         BookingForm.check_out_date == tomorrow
     ).count()
 
-    # Apply specific filter based on filter_type (all filtered by accessible units)
+    # Apply specific filter based on filter_type (all filtered by accessible active units)
     base_query = BookingForm.query.filter(
         BookingForm.company_id == current_user.company_id,
         BookingForm.unit_id.in_(accessible_unit_ids)

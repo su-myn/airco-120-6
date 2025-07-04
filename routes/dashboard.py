@@ -54,15 +54,15 @@ def dashboard():
     booking_stats = {}
 
     if current_user.has_permission('can_view_bookings'):
-        # Get accessible units for this user
-        accessible_units = get_accessible_units_query().all()
-        accessible_unit_ids = [unit.id for unit in accessible_units]
+        # Get accessible ACTIVE units for this user
+        accessible_active_units = get_accessible_units_query().filter(Unit.is_occupied == True).all()
+        accessible_unit_ids = [unit.id for unit in accessible_active_units]
 
         if accessible_unit_ids:
-            # Total accessible units
+            # Total accessible ACTIVE units
             total_units = len(accessible_unit_ids)
 
-            # Current occupancy (check-in <= today < check-out) for accessible units
+            # Current occupancy (check-in <= today < check-out) for accessible active units
             current_occupancy = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
@@ -70,7 +70,7 @@ def dashboard():
                 BookingForm.check_out_date > today
             ).count()
 
-            # Tomorrow occupancy for accessible units
+            # Tomorrow occupancy for accessible active units
             tomorrow_occupancy = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
@@ -78,7 +78,7 @@ def dashboard():
                 BookingForm.check_out_date > tomorrow
             ).count()
 
-            # Revenue today (bookings checking in today) for accessible units
+            # Revenue today (bookings checking in today) for accessible active units
             today_bookings = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
@@ -86,7 +86,7 @@ def dashboard():
             ).all()
             revenue_today = sum(float(booking.price) for booking in today_bookings if booking.price)
 
-            # Revenue tomorrow for accessible units
+            # Revenue tomorrow for accessible active units
             tomorrow_bookings = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
@@ -94,7 +94,7 @@ def dashboard():
             ).all()
             revenue_tomorrow = sum(float(booking.price) for booking in tomorrow_bookings if booking.price)
 
-            # Check-ins and check-outs for accessible units
+            # Check-ins and check-outs for accessible active units
             checkins_today = len(today_bookings)
             checkins_tomorrow = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
@@ -126,7 +126,7 @@ def dashboard():
                 'checkouts_tomorrow': checkouts_tomorrow
             }
         else:
-            # No accessible units
+            # No accessible active units
             booking_stats = {
                 'total_units': 0,
                 'current_occupancy': 0,
