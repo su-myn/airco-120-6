@@ -1015,3 +1015,54 @@ def process_ics_calendar_with_mapping(calendar_data, unit_id, source, source_ide
         db.session.commit()
 
     return bookings_added, bookings_updated, bookings_cancelled, affected_booking_ids
+
+
+# Add this route to test the scheduler manually
+# Add this to one of your route files (like calendar.py or create a new test route)
+
+@calendar_bp.route('/test_sync')
+@login_required
+@permission_required('can_manage_bookings')
+def test_sync():
+    """Manual test route to trigger calendar sync"""
+    try:
+        from app import sync_all_calendars
+        sync_all_calendars()
+        flash('Calendar sync completed successfully!', 'success')
+    except Exception as e:
+        flash(f'Calendar sync failed: {str(e)}', 'danger')
+
+    return redirect(url_for('calendar.import_ics'))
+
+
+# Also add this route to check scheduler status
+@calendar_bp.route('/scheduler_status')
+@login_required
+@permission_required('can_manage_bookings')
+def scheduler_status():
+    """Check scheduler status"""
+    from app import scheduler
+
+    if scheduler.running:
+        jobs = scheduler.get_jobs()
+        job_info = []
+        for job in jobs:
+            job_info.append({
+                'id': job.id,
+                'name': job.name,
+                'next_run': str(job.next_run_time),
+                'trigger': str(job.trigger)
+            })
+
+        return jsonify({
+            'status': 'running',
+            'jobs': job_info,
+            'total_sync_jobs': len([j for j in jobs if 'sync_calendars' in j.id]),
+            'sync_times': ['2:00 AM', '12:00 PM', '6:00 PM', '11:55 PM'],
+            'timezone': 'Asia/Kuala_Lumpur'
+        })
+    else:
+        return jsonify({
+            'status': 'not running',
+            'jobs': []
+        })

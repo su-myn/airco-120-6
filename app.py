@@ -1,3 +1,4 @@
+# Add these imports at the top of app.py
 from flask import Flask, render_template, session
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
@@ -54,13 +55,16 @@ def create_app(config_name=None):
     from routes import register_blueprints
     register_blueprints(app)
 
-    # Initialize scheduler only in production or if explicitly enabled
-    if config_name == 'production' or os.environ.get('ENABLE_SCHEDULER'):
+    # FIXED: Initialize scheduler in all environments
+    # Only disable it explicitly if DISABLE_SCHEDULER is set
+    if not os.environ.get('DISABLE_SCHEDULER'):
         init_scheduler(app)
+        print(f"Scheduler initialized for environment: {config_name}")
 
     return app
 
 
+# ... (keep all your existing functions: create_default_data, create_issue_items, etc.)
 def create_default_data():
     """Create default data for the application"""
     admin_user = User.query.filter_by(email='admin@example.com').first()
@@ -453,11 +457,14 @@ def create_holiday_types():
         print("Default holiday types created")
 
 
+# FIXED: Improved sync function with better error handling and logging
 def sync_all_calendars():
     """Sync all active calendar sources that have URLs"""
     import requests
     from models import CalendarSource
     from routes.calendar import process_ics_calendar
+
+    print(f"Starting calendar sync at {datetime.now()} Malaysia time...")
 
     # Get all active calendar sources with URLs
     calendar_sources = CalendarSource.query.filter(
@@ -465,33 +472,137 @@ def sync_all_calendars():
         CalendarSource.is_active == True
     ).all()
 
+    if not calendar_sources:
+        print("No active calendar sources found for syncing.")
+        return
+
+    print(f"Found {len(calendar_sources)} calendar sources to sync.")
+
+    sync_success_count = 0
+    sync_error_count = 0
+
     for source in calendar_sources:
         try:
-            # Download the ICS file
-            response = requests.get(source.source_url)
+            print(f"Syncing {source.source_identifier or source.source_name} for unit {source.unit.unit_number}...")
+
+            # Download the ICS file with timeout
+            response = requests.get(source.source_url, timeout=30)
             if response.status_code == 200:
                 calendar_data = response.text
+
                 # Process the calendar with the source identifier
-                process_ics_calendar(
+                units_added, units_updated, bookings_cancelled, affected_booking_ids = process_ics_calendar(
                     calendar_data,
                     source.unit_id,
                     source.source_name,
                     source.source_identifier
                 )
+
                 # Update the last_updated timestamp
                 source.last_updated = datetime.utcnow()
                 db.session.commit()
-                print(f"Successfully synced {source.source_identifier} for unit {source.unit.unit_number}")
+
+                sync_success_count += 1
+                print(
+                    f"Successfully synced {source.source_identifier or source.source_name} for unit {source.unit.unit_number}")
+                print(f"  - Added: {units_added}, Updated: {units_updated}, Cancelled: {bookings_cancelled}")
+
+            else:
+                print(f"Failed to download calendar from {source.source_url} - HTTP {response.status_code}")
+                sync_error_count += 1
+
+        except requests.exceptions.Timeout:
+            print(
+                f"Timeout while syncing calendar for {source.unit.unit_number} from {source.source_identifier or source.source_name}")
+            sync_error_count += 1
         except Exception as e:
-            print(f"Error syncing calendar for {source.unit.unit_number} from {source.source_identifier}: {str(e)}")
+            print(
+                f"Error syncing calendar for {source.unit.unit_number} from {source.source_identifier or source.source_name}: {str(e)}")
+            sync_error_count += 1
+
+    print(f"Calendar sync completed. Success: {sync_success_count}, Errors: {sync_error_count}")
 
 
+# FIXED: Initialize scheduler with Malaysia timezone
 def init_scheduler(app):
+    # Set scheduler configuration for Malaysia timezone
+    app.config['SCHEDULER_TIMEZONE'] = 'Asia/Kuala_Lumpur'
+    app.config['SCHEDULER_API_ENABLED'] = False  # Disable API for security
+
     scheduler.init_app(app)
     scheduler.start()
 
-    # Schedule the sync task to run every day at 2 AM
-    scheduler.add_job(func=sync_all_calendars, trigger='cron', hour=2, id='sync_calendars')
+    # FIXED: Schedule multiple sync tasks throughout the day
+    # Using Malaysia timezone for all cron jobs
+    malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
+
+    # 2:00 AM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars,
+        trigger='cron',
+        hour=2,
+        minute=0,
+        timezone=malaysia_tz,
+        id='sync_calendars_2am',
+        name='Calendar Sync - 2:00 AM',
+        replace_existing=True
+    )
+
+    # 12:00 PM (Noon) Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars,
+        trigger='cron',
+        hour=12,
+        minute=0,
+        timezone=malaysia_tz,
+        id='sync_calendars_12pm',
+        name='Calendar Sync - 12:00 PM',
+        replace_existing=True
+    )
+
+    # 6:00 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars,
+        trigger='cron',
+        hour=18,
+        minute=0,
+        timezone=malaysia_tz,
+        id='sync_calendars_6pm',
+        name='Calendar Sync - 6:00 PM',
+        replace_existing=True
+    )
+
+    # 11:55 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars,
+        trigger='cron',
+        hour=23,
+        minute=55,
+        timezone=malaysia_tz,
+        id='sync_calendars_1155pm',
+        name='Calendar Sync - 11:55 PM',
+        replace_existing=True
+    )
+
+    print("Scheduler started successfully!")
+    print("Calendar sync scheduled for:")
+    print("  - 2:00 AM Malaysia time")
+    print("  - 12:00 PM Malaysia time")
+    print("  - 6:00 PM Malaysia time")
+    print("  - 11:55 PM Malaysia time")
+
+    # OPTIONAL: Add a test job that runs every 5 minutes for debugging
+    # Remove this in production
+    if os.environ.get('DEBUG_SCHEDULER'):
+        scheduler.add_job(
+            func=lambda: print(f"Test scheduler job running at {datetime.now()}"),
+            trigger='interval',
+            minutes=5,
+            id='test_scheduler',
+            name='Test Scheduler',
+            replace_existing=True
+        )
+        print("Debug scheduler job added (runs every 5 minutes)")
 
 
 # Create app instance
