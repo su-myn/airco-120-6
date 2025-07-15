@@ -800,7 +800,7 @@
                 let compareY = y.textContent.toLowerCase();
 
                 // Special sorting for date columns
-                if (columnIndex === 3 || columnIndex === 4) {
+                if (columnIndex === 3 || columnIndex === 4 || columnIndex === 11) {
                     compareX = new Date(x.textContent);
                     compareY = new Date(y.textContent);
                 }

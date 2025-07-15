@@ -101,6 +101,27 @@
         letter-spacing: 0.5px;
     }
 
+    /* Make metric cards clickable with hover effects */
+    .booking-metrics a {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: block;
+        border-radius: 8px;
+    }
+
+    .booking-metrics a:hover {
+        transform: translateY(-2px);
+    }
+
+    .booking-metrics a:hover .metric-card {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Add cursor pointer to indicate clickability */
+    .metric-card {
+        cursor: pointer;
+        transition: box-shadow 0.2s ease;
+    }
+
     .occupancy-value { color: #4CAF50; }
     .revenue-value { color: #FF5722; }
     .checkin-value { color: #2196F3; }
@@ -773,42 +794,58 @@
 
                 <!-- Today's Metrics -->
                 <div class="booking-metrics">
-                    <div class="metric-card">
-                        <div class="metric-value occupancy-value">{{ booking_stats.current_occupancy }}/{{ booking_stats.total_units }}</div>
-                        <div class="metric-label">Occupancy Today</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value revenue-value">{{ "%.2f"|format(booking_stats.revenue_today) }}</div>
-                        <div class="metric-label">Revenue Today</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value checkin-value">{{ booking_stats.checkins_today }}</div>
-                        <div class="metric-label">Check-Ins Today</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value checkout-value">{{ booking_stats.checkouts_today }}</div>
-                        <div class="metric-label">Check-Outs Today</div>
-                    </div>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='occupancy_current') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value occupancy-value">{{ booking_stats.current_occupancy }}/{{ booking_stats.total_units }}</div>
+                            <div class="metric-label">Occupancy Today</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='revenue_today') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value revenue-value">{{ "%.2f"|format(booking_stats.revenue_today) }}</div>
+                            <div class="metric-label">Revenue Today</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='check_ins_today') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value checkin-value">{{ booking_stats.checkins_today }}</div>
+                            <div class="metric-label">Check-Ins Today</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='check_outs_today') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value checkout-value">{{ booking_stats.checkouts_today }}</div>
+                            <div class="metric-label">Check-Outs Today</div>
+                        </div>
+                    </a>
                 </div>
 
-                <!-- Tomorrow's Metrics -->
+                <!-- Tomorrow's Metrics - Make them clickable -->
                 <div class="booking-metrics">
-                    <div class="metric-card">
-                        <div class="metric-value occupancy-value">{{ booking_stats.tomorrow_occupancy }}/{{ booking_stats.total_units }}</div>
-                        <div class="metric-label">Occupancy Tomorrow</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value revenue-value">{{ "%.2f"|format(booking_stats.revenue_tomorrow) }}</div>
-                        <div class="metric-label">Revenue Tomorrow</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value checkin-value">{{ booking_stats.checkins_tomorrow }}</div>
-                        <div class="metric-label">Check-Ins Tomorrow</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value checkout-value">{{ booking_stats.checkouts_tomorrow }}</div>
-                        <div class="metric-label">Check-Outs Tomorrow</div>
-                    </div>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='occupancy_tomorrow') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value occupancy-value">{{ booking_stats.tomorrow_occupancy }}/{{ booking_stats.total_units }}</div>
+                            <div class="metric-label">Occupancy Tomorrow</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='revenue_tomorrow') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value revenue-value">{{ "%.2f"|format(booking_stats.revenue_tomorrow) }}</div>
+                            <div class="metric-label">Revenue Tomorrow</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='check_ins_tomorrow') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value checkin-value">{{ booking_stats.checkins_tomorrow }}</div>
+                            <div class="metric-label">Check-Ins Tomorrow</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('bookings.bookings_filter', filter_type='check_outs_tomorrow') }}" style="text-decoration: none; color: inherit; flex: 1;">
+                        <div class="metric-card">
+                            <div class="metric-value checkout-value">{{ booking_stats.checkouts_tomorrow }}</div>
+                            <div class="metric-label">Check-Outs Tomorrow</div>
+                        </div>
+                    </a>
                 </div>
             </div>
             {% endif %}
