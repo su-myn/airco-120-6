@@ -83,7 +83,6 @@
     }
 
     /* Calendar Event Styling */
-    /* Calendar Event Styling */
     .booking-event {
         border: none !important;
         padding: 2px 5px !important;
@@ -91,60 +90,24 @@
         border-radius: 0 !important; /* Default is flat rectangles */
     }
 
-    /* Rounded on both sides for single-day events */
+    /* Override FullCalendar's default classes - remove all auto-rounding */
+    .fc-event-start,
+    .fc-event-end,
     .fc-event-start-end {
-        border-radius: 12px !important;
-    }
-
-    /* Rounded on left side only */
-    .fc-event-start-left {
-        border-radius: 12px 0 0 8px !important;
-    }
-
-    /* Rounded on right side only */
-    .fc-event-end-right {
-        border-radius: 0 12px 12px 0 !important;
-    }
-
-    /* Rounded on left side only for first day of multi-day events */
-    .fc-event-start {
-        border-radius: 12px 0 0 12px !important;
-    }
-
-    /* Rounded on right side only for last day of multi-day events */
-    .fc-event-end {
-        border-radius: 0 12px 12px 0 !important;
-    }
-
-    /* No rounding for middle days */
-    .fc-event-middle {
         border-radius: 0 !important;
     }
 
-    /* New**/
-    /* Rounded on right side only for last day of multi-day events */
-    .fc-event-end:not(.fc-event-start) {
-        border-radius: 0 12px 12px 0 !important;
+    /* Custom classes for actual booking start/end dates */
+    .actual-booking-start:not(.actual-booking-end) {
+        border-radius: 12px 0 0 12px !important; /* Rounded left, straight right */
     }
 
-    /* For segments that are both start and end (single day events or events that span whole week) */
-    .fc-event-start.fc-event-end {
-        border-radius: 12px !important;
+    .actual-booking-end:not(.actual-booking-start) {
+        border-radius: 0 12px 12px 0 !important; /* Straight left, rounded right */
     }
 
-    /* For event segments that represent the actual first day of a booking */
-    .fc-daygrid-event.actual-booking-start {
-        border-radius: 12px 0 0 12px !important;
-    }
-
-    /* For event segments that represent the actual last day of a booking */
-    .fc-daygrid-event.actual-booking-end {
-        border-radius: 0 12px 12px 0 !important;
-    }
-
-    /* For event segments that are both the start and end of a booking */
-    .fc-daygrid-event.actual-booking-start.actual-booking-end {
-        border-radius: 12px !important;
+    .actual-booking-start.actual-booking-end {
+        border-radius: 12px !important; /* Fully rounded for single-day events */
     }
 
     .source-airbnb {
@@ -392,6 +355,8 @@
             nowIndicator: true,
             dayMaxEvents: true,
             eventDisplay: 'block',
+            weekNumbers: false,
+            firstDay: 0, // Start week on Sunday
             events: [],
             eventTimeFormat: {
                 hour: '2-digit',
@@ -427,29 +392,39 @@
                 }
             },
 
-
-
             eventDidMount: function(info) {
-                // Get the actual booking start and end dates
-                var checkInDate = new Date(info.event.extendedProps.check_in_date);
-                checkInDate.setHours(0, 0, 0, 0);
+                // Get segment-specific information
+                const isActualStart = info.event.extendedProps.is_actual_start;
+                const isActualEnd = info.event.extendedProps.is_actual_end;
+                const segmentStart = info.event.extendedProps.segment_start;
+                const segmentEnd = info.event.extendedProps.segment_end;
 
-                var checkOutDate = new Date(info.event.extendedProps.check_out_date);
-                checkOutDate.setHours(0, 0, 0, 0);
-                checkOutDate.setDate(checkOutDate.getDate() - 1); // The day before checkout is the last stay day
+                console.log('=== EVENT DEBUG ===');
+                console.log('Event:', info.event.title);
+                console.log('Segment START:', segmentStart);
+                console.log('Segment END:', segmentEnd);
+                console.log('Is actual booking start?', isActualStart);
+                console.log('Is actual booking end?', isActualEnd);
 
-                // Get current date for this event segment
-                var currentDate = new Date(info.event.start);
-                currentDate.setHours(0, 0, 0, 0);
+                // Remove FullCalendar's auto-added classes
+                info.el.classList.remove('fc-event-start', 'fc-event-end', 'fc-event-start-end');
 
-                // Determine if this segment is the actual booking start or end date
-                if (isSameDay(currentDate, checkInDate)) {
+                // Apply our custom classes based on segment flags
+                if (isActualStart && isActualEnd) {
+                    info.el.classList.add('actual-booking-start', 'actual-booking-end');
+                    console.log('Applied: fully rounded (single-day event)');
+                } else if (isActualStart) {
                     info.el.classList.add('actual-booking-start');
+                    console.log('Applied: rounded left only (booking start)');
+                } else if (isActualEnd) {
+                    info.el.classList.add('actual-booking-end');
+                    console.log('Applied: rounded right only (booking end)');
+                } else {
+                    console.log('Applied: no rounding (middle segment)');
                 }
 
-                if (isSameDay(currentDate, checkOutDate)) {
-                    info.el.classList.add('actual-booking-end');
-                }
+                console.log('Final classes:', info.el.className);
+                console.log('===================');
 
                 // Add day counter for list view
                 if (calendar.view.type === 'listMonth' || calendar.view.type === 'listWeek') {
@@ -540,7 +515,6 @@
                         }
                     }
                 }
-
 
                 // Add tooltip to events
                 const tooltip = document.createElement('div');
@@ -844,24 +818,116 @@
             });
         }
 
+        // NEW: Function to split events by week boundaries
+        function splitEventByWeeks(startDate, endDate, booking) {
+            const segments = [];
+            let currentDate = new Date(startDate);
+            const finalDate = new Date(endDate);
+
+            // Helper function to get week number
+            function getWeekOfMonth(date) {
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const firstDayOfWeek = firstDay.getDay();
+                const dayOfMonth = date.getDate();
+                return Math.ceil((dayOfMonth + firstDayOfWeek) / 7);
+            }
+
+            let segmentId = 1;
+
+            while (currentDate < finalDate) {
+                const currentWeek = getWeekOfMonth(currentDate);
+
+                // Find the end of the current week row (Saturday)
+                let segmentEnd = new Date(currentDate);
+
+                // Move to the end of current week (Saturday) or to finalDate, whichever is earlier
+                while (segmentEnd < finalDate && getWeekOfMonth(segmentEnd) === currentWeek) {
+                    segmentEnd.setDate(segmentEnd.getDate() + 1);
+                }
+
+                // If we went past the final date, adjust back
+                if (segmentEnd > finalDate) {
+                    segmentEnd = new Date(finalDate);
+                }
+
+                // Create segment
+                const isActualStart = currentDate.getTime() === startDate.getTime();
+                const isActualEnd = segmentEnd.getTime() === finalDate.getTime();
+
+                segments.push({
+                    id: `${booking.id}-segment-${segmentId}`,
+                    unit_number: booking.unit_number,
+                    start: currentDate.toISOString().split('T')[0],
+                    end: segmentEnd.toISOString().split('T')[0],
+                    extendedProps: {
+                        booking_id: booking.id,
+                        unit_id: booking.unit_id,
+                        guest_name: booking.guest_name,
+                        nights: booking.nights,
+                        guests: booking.guests,
+                        price: booking.price,
+                        source: booking.source,
+                        payment_status: booking.payment_status,
+                        contact: booking.contact,
+                        check_in_date: booking.check_in_date,
+                        check_out_date: booking.check_out_date,
+                        // Add flags for this specific segment
+                        is_actual_start: isActualStart,
+                        is_actual_end: isActualEnd,
+                        segment_start: currentDate.toISOString().split('T')[0],
+                        segment_end: segmentEnd.toISOString().split('T')[0]
+                    },
+                    source: booking.source
+                });
+
+                console.log(`Created segment ${segmentId}:`, {
+                    start: currentDate.toDateString(),
+                    end: segmentEnd.toDateString(),
+                    isActualStart,
+                    isActualEnd,
+                    week: currentWeek
+                });
+
+                // Move to the start of next week
+                currentDate = new Date(segmentEnd);
+                segmentId++;
+            }
+
+            return segments;
+        }
+
         // Function to render events on the calendar
         function renderEvents(data) {
             // Clear existing events
             calendar.removeAllEvents();
 
-            // Add events to calendar
+            // Process and split events that span multiple weeks
+            const processedEvents = [];
+
             data.forEach(booking => {
+                const checkInDate = new Date(booking.check_in_date);
+                const checkOutDate = new Date(booking.check_out_date);
+
+                // Split events that span multiple week rows
+                const eventSegments = splitEventByWeeks(checkInDate, checkOutDate, booking);
+                processedEvents.push(...eventSegments);
+            });
+
+            // Add processed events to calendar
+            processedEvents.forEach(eventData => {
                 // Determine color based on booking source
                 let backgroundColor, textColor;
                 let classNames = ['booking-event'];
 
-                switch(booking.source) {
+                switch(eventData.source) {
                     case 'Airbnb':
                         backgroundColor = '#ff5a5f';
                         classNames.push('source-airbnb');
                         break;
                     case 'Agoda':
-                        backgroundColor = '#5C2D91'; // Agoda Purple
+                        backgroundColor = '#5C2D91';
                         textColor = 'white';
                         classNames.push('source-agoda');
                         break;
@@ -871,12 +937,12 @@
                         classNames.push('source-booking');
                         break;
                     case 'Traveloka':
-                        backgroundColor = '#0770E3'; // Traveloka Blue
+                        backgroundColor = '#0770E3';
                         textColor = 'white';
                         classNames.push('source-traveloka');
                         break;
                     case 'Ctrip':
-                        backgroundColor = '#2577E3'; // Ctrip Blue
+                        backgroundColor = '#2577E3';
                         textColor = 'white';
                         classNames.push('source-ctrip');
                         break;
@@ -903,27 +969,15 @@
 
                 // Add event to calendar
                 calendar.addEvent({
-                    id: booking.id,
-                    title: booking.unit_number,
-                    start: booking.check_in_date,
-                    end: booking.check_out_date,
+                    id: eventData.id,
+                    title: eventData.unit_number,
+                    start: eventData.start,
+                    end: eventData.end,
                     backgroundColor: backgroundColor,
                     borderColor: backgroundColor,
                     textColor: textColor || 'black',
                     classNames: classNames,
-                    extendedProps: {
-                        booking_id: booking.id,
-                        unit_id: booking.unit_id,
-                        guest_name: booking.guest_name,
-                        nights: booking.nights,
-                        guests: booking.guests,
-                        price: booking.price,
-                        source: booking.source,
-                        payment_status: booking.payment_status,
-                        contact: booking.contact,
-                        check_in_date: booking.check_in_date,
-                        check_out_date: booking.check_out_date
-                    }
+                    extendedProps: eventData.extendedProps
                 });
             });
         }
