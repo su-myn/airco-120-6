@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 
 from models import db, User, Role, Company, HolidayType
 from config import config
+from routes.calendar import process_ics_calendar
+import requests
+from models import CalendarSource
+
 
 # Initialize extensions
 bcrypt = Bcrypt()
@@ -460,15 +464,14 @@ def create_holiday_types():
 # FIXED: Improved sync function with better error handling and logging
 def sync_all_calendars():
     """Sync all active calendar sources that have URLs"""
-    import requests
-    from models import CalendarSource
-    from routes.calendar import process_ics_calendar
+
 
     print(f"Starting calendar sync at {datetime.now()} Malaysia time...")
 
     # Get all active calendar sources with URLs
     calendar_sources = CalendarSource.query.filter(
         CalendarSource.source_url.isnot(None),
+        CalendarSource.source_url != '',
         CalendarSource.is_active == True
     ).all()
 
@@ -484,18 +487,22 @@ def sync_all_calendars():
     for source in calendar_sources:
         try:
             print(f"Syncing {source.source_identifier or source.source_name} for unit {source.unit.unit_number}...")
+            print(f"URL: {source.source_url}")
 
             # Download the ICS file with timeout
             response = requests.get(source.source_url, timeout=30)
+            print(f"Response status: {response.status_code}")
+
             if response.status_code == 200:
                 calendar_data = response.text
+                print(f"Downloaded calendar data, length: {len(calendar_data)}")
 
                 # Process the calendar with the source identifier
                 units_added, units_updated, bookings_cancelled, affected_booking_ids = process_ics_calendar(
                     calendar_data,
                     source.unit_id,
                     source.source_name,
-                    source.source_identifier
+                    source.source_identifier or source.source_name
                 )
 
                 # Update the last_updated timestamp
@@ -572,6 +579,30 @@ def init_scheduler(app):
         replace_existing=True
     )
 
+    # 7:15 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars,
+        trigger='cron',
+        hour=19,
+        minute=5,
+        timezone=malaysia_tz,
+        id='sync_calendars_715pm',
+        name='Calendar Sync - 7:15 PM',
+        replace_existing=True
+    )
+
+    # 7:30 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars,
+        trigger='cron',
+        hour=19,
+        minute=15,
+        timezone=malaysia_tz,
+        id='sync_calendars_730pm',
+        name='Calendar Sync - 7:30 PM',
+        replace_existing=True
+    )
+
     # 11:55 PM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars,
@@ -589,6 +620,8 @@ def init_scheduler(app):
     print("  - 2:00 AM Malaysia time")
     print("  - 12:00 PM Malaysia time")
     print("  - 6:00 PM Malaysia time")
+    print("  - 7:05 PM Malaysia time")
+    print("  - 7:15 PM Malaysia time")
     print("  - 11:55 PM Malaysia time")
 
     # OPTIONAL: Add a test job that runs every 5 minutes for debugging
@@ -607,6 +640,18 @@ def init_scheduler(app):
 
 # Create app instance
 app = create_app()
+
+# Force scheduler to start in production
+with app.app_context():
+    if not os.environ.get('DISABLE_SCHEDULER'):
+        try:
+            from app import scheduler
+            if not scheduler.running:
+                scheduler.start()
+                print("Scheduler started successfully!")
+        except Exception as e:
+            print(f"Error starting scheduler: {e}")
+
 
 # Create the database tables and default data
 with app.app_context():

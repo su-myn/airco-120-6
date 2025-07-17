@@ -1066,3 +1066,64 @@ def scheduler_status():
             'status': 'not running',
             'jobs': []
         })
+
+
+@calendar_bp.route('/test_scheduler_status')
+@login_required
+@permission_required('can_manage_bookings')
+def test_scheduler_status():
+    """Test route to check scheduler status"""
+    from app import scheduler
+
+    status = {
+        'running': scheduler.running if scheduler else False,
+        'jobs': [],
+        'calendar_sources': []
+    }
+
+    if scheduler and scheduler.running:
+        jobs = scheduler.get_jobs()
+        for job in jobs:
+            if 'sync_calendars' in job.id:
+                status['jobs'].append({
+                    'id': job.id,
+                    'name': job.name,
+                    'next_run': str(job.next_run_time),
+                    'trigger': str(job.trigger)
+                })
+
+    # Check calendar sources
+    calendar_sources = CalendarSource.query.filter(
+        CalendarSource.source_url.isnot(None),
+        CalendarSource.source_url != '',
+        CalendarSource.is_active == True
+    ).all()
+
+    for source in calendar_sources:
+        status['calendar_sources'].append({
+            'id': source.id,
+            'unit': source.unit.unit_number,
+            'source_name': source.source_name,
+            'source_identifier': source.source_identifier,
+            'last_updated': source.last_updated.strftime('%Y-%m-%d %H:%M:%S') if source.last_updated else 'Never',
+            'url_present': bool(source.source_url)
+        })
+
+    return jsonify(status)
+
+
+@calendar_bp.route('/test_manual_sync')
+@login_required
+@permission_required('can_manage_bookings')
+def test_manual_sync():
+    """Manually trigger calendar sync for testing"""
+    try:
+        from app import sync_all_calendars
+        sync_all_calendars()
+        flash('Manual sync completed successfully!', 'success')
+    except Exception as e:
+        flash(f'Manual sync failed: {str(e)}', 'danger')
+
+    return redirect(url_for('calendar.import_ics'))
+
+
