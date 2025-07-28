@@ -461,11 +461,16 @@ def create_holiday_types():
         print("Default holiday types created")
 
 
+# FIXED: Create a wrapper function that runs with application context
+def sync_all_calendars_with_context():
+    """Wrapper function to run sync_all_calendars with application context"""
+    with app.app_context():
+        sync_all_calendars()
+
+
 # FIXED: Improved sync function with better error handling and logging
 def sync_all_calendars():
     """Sync all active calendar sources that have URLs"""
-
-
     print(f"Starting calendar sync at {datetime.now()} Malaysia time...")
 
     # Get all active calendar sources with URLs
@@ -486,6 +491,12 @@ def sync_all_calendars():
 
     for source in calendar_sources:
         try:
+            # Validate that the unit still exists
+            if not source.unit:
+                print(f"Error: Unit for calendar source {source.id} no longer exists. Skipping.")
+                sync_error_count += 1
+                continue
+
             print(f"Syncing {source.source_identifier or source.source_name} for unit {source.unit.unit_number}...")
             print(f"URL: {source.source_url}")
 
@@ -520,11 +531,11 @@ def sync_all_calendars():
 
         except requests.exceptions.Timeout:
             print(
-                f"Timeout while syncing calendar for {source.unit.unit_number} from {source.source_identifier or source.source_name}")
+                f"Timeout while syncing calendar for {source.unit.unit_number if source.unit else 'Unknown Unit'} from {source.source_identifier or source.source_name}")
             sync_error_count += 1
         except Exception as e:
             print(
-                f"Error syncing calendar for {source.unit.unit_number} from {source.source_identifier or source.source_name}: {str(e)}")
+                f"Error syncing calendar for {source.unit.unit_number if source.unit else 'Unknown Unit'} from {source.source_identifier or source.source_name}: {str(e)}")
             sync_error_count += 1
 
     print(f"Calendar sync completed. Success: {sync_success_count}, Errors: {sync_error_count}")
@@ -543,9 +554,45 @@ def init_scheduler(app):
     # Using Malaysia timezone for all cron jobs
     malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
 
+    # 0:25 AM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=0,
+        minute=25,
+        timezone=malaysia_tz,
+        id='sync_calendars_0.15am',
+        name='Calendar Sync - 0:15 AM',
+        replace_existing=True
+    )
+
+    # 0:30 AM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=0,
+        minute=30,
+        timezone=malaysia_tz,
+        id='sync_calendars_0.30am',
+        name='Calendar Sync - 0:30 AM',
+        replace_existing=True
+    )
+
+    # 0:35 AM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=0,
+        minute=35,
+        timezone=malaysia_tz,
+        id='sync_calendars_0.35am',
+        name='Calendar Sync - 0:35 AM',
+        replace_existing=True
+    )
+
     # 2:00 AM Malaysia time
     scheduler.add_job(
-        func=sync_all_calendars,
+        func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=2,
         minute=0,
@@ -557,7 +604,7 @@ def init_scheduler(app):
 
     # 12:00 PM (Noon) Malaysia time
     scheduler.add_job(
-        func=sync_all_calendars,
+        func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=12,
         minute=0,
@@ -569,7 +616,7 @@ def init_scheduler(app):
 
     # 6:00 PM Malaysia time
     scheduler.add_job(
-        func=sync_all_calendars,
+        func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=18,
         minute=0,
@@ -579,33 +626,45 @@ def init_scheduler(app):
         replace_existing=True
     )
 
-    # 7:15 PM Malaysia time
+    # 7:52 PM Malaysia time
     scheduler.add_job(
-        func=sync_all_calendars,
+        func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=19,
-        minute=5,
+        minute=52,
         timezone=malaysia_tz,
-        id='sync_calendars_715pm',
-        name='Calendar Sync - 7:15 PM',
+        id='sync_calendars_752pm',
+        name='Calendar Sync - 7:52 PM',
         replace_existing=True
     )
 
-    # 7:30 PM Malaysia time
+    # 8:00 PM Malaysia time
     scheduler.add_job(
-        func=sync_all_calendars,
+        func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
-        hour=19,
-        minute=15,
+        hour=20,
+        minute=0,
         timezone=malaysia_tz,
-        id='sync_calendars_730pm',
-        name='Calendar Sync - 7:30 PM',
+        id='sync_calendars_800pm',
+        name='Calendar Sync - 8:00 PM',
+        replace_existing=True
+    )
+
+    # 8:30 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=20,
+        minute=30,
+        timezone=malaysia_tz,
+        id='sync_calendars_830pm',
+        name='Calendar Sync - 8:30 PM',
         replace_existing=True
     )
 
     # 11:55 PM Malaysia time
     scheduler.add_job(
-        func=sync_all_calendars,
+        func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=23,
         minute=55,
@@ -617,11 +676,15 @@ def init_scheduler(app):
 
     print("Scheduler started successfully!")
     print("Calendar sync scheduled for:")
+    print("  - 0:25 AM Malaysia time")
+    print("  - 0:30 AM Malaysia time")
+    print("  - 0:35 AM Malaysia time")
     print("  - 2:00 AM Malaysia time")
     print("  - 12:00 PM Malaysia time")
     print("  - 6:00 PM Malaysia time")
-    print("  - 7:05 PM Malaysia time")
-    print("  - 7:15 PM Malaysia time")
+    print("  - 7:52 PM Malaysia time")
+    print("  - 8:00 PM Malaysia time")
+    print("  - 8:30 PM Malaysia time")
     print("  - 11:55 PM Malaysia time")
 
     # OPTIONAL: Add a test job that runs every 5 minutes for debugging

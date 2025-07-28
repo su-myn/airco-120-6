@@ -418,8 +418,10 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None)
         print(f"Error parsing calendar: {str(e)}")
         return 0, 0, 0, []
 
+    # FIXED: Validate that the unit exists
     unit = Unit.query.get(unit_id)
     if not unit:
+        print(f"Error: Unit with ID {unit_id} does not exist")
         return 0, 0, 0, []
 
     bookings_added = 0
@@ -595,7 +597,6 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None)
         db.session.commit()
 
     return len(added_units), len(updated_units), bookings_cancelled, affected_booking_ids
-
 
 def should_manage_booking(booking, source, source_identifier):
     """
