@@ -554,39 +554,51 @@ def init_scheduler(app):
     # Using Malaysia timezone for all cron jobs
     malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
 
-    # 0:25 AM Malaysia time
+    # 0:40 AM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=0,
-        minute=25,
+        minute=40,
         timezone=malaysia_tz,
-        id='sync_calendars_0.15am',
-        name='Calendar Sync - 0:15 AM',
+        id='sync_calendars_0.40am',
+        name='Calendar Sync - 0:40 AM',
         replace_existing=True
     )
 
-    # 0:30 AM Malaysia time
+    # 0:45 AM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=0,
-        minute=30,
+        minute=45,
         timezone=malaysia_tz,
-        id='sync_calendars_0.30am',
-        name='Calendar Sync - 0:30 AM',
+        id='sync_calendars_0.45am',
+        name='Calendar Sync - 0:45 AM',
         replace_existing=True
     )
 
-    # 0:35 AM Malaysia time
+    # 0:50 AM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
         hour=0,
-        minute=35,
+        minute=50,
         timezone=malaysia_tz,
-        id='sync_calendars_0.35am',
-        name='Calendar Sync - 0:35 AM',
+        id='sync_calendars_0.50am',
+        name='Calendar Sync - 0:50 AM',
+        replace_existing=True
+    )
+
+    # 0:55 AM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=0,
+        minute=55,
+        timezone=malaysia_tz,
+        id='sync_calendars_0.55am',
+        name='Calendar Sync - 0:55 AM',
         replace_existing=True
     )
 
@@ -676,9 +688,10 @@ def init_scheduler(app):
 
     print("Scheduler started successfully!")
     print("Calendar sync scheduled for:")
-    print("  - 0:25 AM Malaysia time")
-    print("  - 0:30 AM Malaysia time")
-    print("  - 0:35 AM Malaysia time")
+    print("  - 0:40 AM Malaysia time")
+    print("  - 0:45 AM Malaysia time")
+    print("  - 0:50 AM Malaysia time")
+    print("  - 0:55 AM Malaysia time")
     print("  - 2:00 AM Malaysia time")
     print("  - 12:00 PM Malaysia time")
     print("  - 6:00 PM Malaysia time")
