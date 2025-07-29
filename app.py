@@ -676,6 +676,7 @@ def init_scheduler(app):
     # Using Malaysia timezone for all cron jobs
     malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
 
+
     # 2:00 AM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
@@ -687,6 +688,19 @@ def init_scheduler(app):
         name='Calendar Sync - 2:00 AM',
         replace_existing=True
     )
+
+    # TESTING 9:55 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=21,
+        minute=55,
+        timezone=malaysia_tz,
+        id='sync_calendars_955pm',
+        name='Calendar Sync - 9:55 PM',
+        replace_existing=True
+    )
+
     # 9:00 AM (Noon) Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
@@ -782,6 +796,12 @@ def init_scheduler(app):
     print("  - 9:00 PM Malaysia time")
     print("  - 11:55 PM Malaysia time")
 
+    # Log all scheduled jobs for debugging
+    jobs = scheduler.get_jobs()
+    print(f"\nTotal jobs scheduled: {len(jobs)}")
+    for job in jobs:
+        print(f"  - {job.name} (ID: {job.id}) - Next run: {job.next_run_time}")
+
     # OPTIONAL: Add a test job that runs every 5 minutes for debugging
     # Remove this in production
     if os.environ.get('DEBUG_SCHEDULER'):
@@ -798,18 +818,6 @@ def init_scheduler(app):
 
 # Create app instance
 app = create_app()
-
-# Force scheduler to start in production
-with app.app_context():
-    if not os.environ.get('DISABLE_SCHEDULER'):
-        try:
-            from app import scheduler
-            if not scheduler.running:
-                scheduler.start()
-                print("Scheduler started successfully!")
-        except Exception as e:
-            print(f"Error starting scheduler: {e}")
-
 
 # Create the database tables and default data
 with app.app_context():
