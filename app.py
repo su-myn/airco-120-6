@@ -462,83 +462,205 @@ def create_holiday_types():
 
 
 # FIXED: Create a wrapper function that runs with application context
+
 def sync_all_calendars_with_context():
     """Wrapper function to run sync_all_calendars with application context"""
-    with app.app_context():
-        sync_all_calendars()
+    try:
+        print(f"=== SCHEDULED SYNC STARTING at {datetime.now()} ===")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Flask app: {app}")
+        print(f"App context: {app.app_context()}")
+
+        with app.app_context():
+            print("✓ App context established successfully")
+
+            # Test database connection
+            try:
+                from models import CalendarSource
+                source_count = CalendarSource.query.count()
+                print(f"✓ Database connection OK - found {source_count} calendar sources")
+            except Exception as db_error:
+                print(f"✗ Database connection error: {db_error}")
+                return
+
+            # Test current_user context (this might be the issue)
+            try:
+                print(f"✓ About to call sync_all_calendars()")
+                result = sync_all_calendars()
+                print(f"✓ sync_all_calendars() completed with result: {result}")
+            except Exception as sync_error:
+                print(f"✗ Error in sync_all_calendars(): {sync_error}")
+                import traceback
+                traceback.print_exc()
+
+    except Exception as e:
+        print(f"✗ CRITICAL ERROR in sync_all_calendars_with_context: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        print(f"=== SCHEDULED SYNC ENDED at {datetime.now()} ===")
 
 
 # FIXED: Improved sync function with better error handling and logging
 def sync_all_calendars():
-    """Sync all active calendar sources that have URLs"""
+    """Sync all active calendar sources that have URLs - FIXED VERSION"""
     print(f"Starting calendar sync at {datetime.now()} Malaysia time...")
 
-    # Get all active calendar sources with URLs
-    calendar_sources = CalendarSource.query.filter(
-        CalendarSource.source_url.isnot(None),
-        CalendarSource.source_url != '',
-        CalendarSource.is_active == True
-    ).all()
+    try:
+        # Import here to avoid circular imports
+        from models import CalendarSource, User
+        from routes.calendar import process_ics_calendar_scheduled  # Add this import
 
-    if not calendar_sources:
-        print("No active calendar sources found for syncing.")
-        return
+        # Rest of your function remains the same...
+        # Get all active calendar sources with URLs
+        calendar_sources = CalendarSource.query.filter(
+            CalendarSource.source_url.isnot(None),
+            CalendarSource.source_url != '',
+            CalendarSource.is_active == True
+        ).all()
 
-    print(f"Found {len(calendar_sources)} calendar sources to sync.")
+        if not calendar_sources:
+            print("No active calendar sources found for syncing.")
+            return {"success": True, "message": "No sources to sync"}
 
-    sync_success_count = 0
-    sync_error_count = 0
+        print(f"Found {len(calendar_sources)} calendar sources to sync.")
 
-    for source in calendar_sources:
-        try:
-            # Validate that the unit still exists
-            if not source.unit:
-                print(f"Error: Unit for calendar source {source.id} no longer exists. Skipping.")
-                sync_error_count += 1
-                continue
+        sync_success_count = 0
+        sync_error_count = 0
+        sync_results = []
 
-            print(f"Syncing {source.source_identifier or source.source_name} for unit {source.unit.unit_number}...")
-            print(f"URL: {source.source_url}")
+        for source in calendar_sources:
+            source_result = {
+                'source_id': source.id,
+                'unit_number': source.unit.unit_number if source.unit else 'Unknown',
+                'source_name': source.source_name,
+                'success': False,
+                'error': None,
+                'added': 0,
+                'updated': 0,
+                'cancelled': 0
+            }
 
-            # Download the ICS file with timeout
-            response = requests.get(source.source_url, timeout=30)
-            print(f"Response status: {response.status_code}")
+            try:
+                # Validate that the unit still exists
+                if not source.unit:
+                    error_msg = f"Unit for calendar source {source.id} no longer exists"
+                    print(f"Error: {error_msg}")
+                    source_result['error'] = error_msg
+                    sync_error_count += 1
+                    sync_results.append(source_result)
+                    continue
 
-            if response.status_code == 200:
-                calendar_data = response.text
-                print(f"Downloaded calendar data, length: {len(calendar_data)}")
+                print(f"Syncing {source.source_identifier or source.source_name} for unit {source.unit.unit_number}...")
+                print(f"URL: {source.source_url}")
 
-                # Process the calendar with the source identifier
-                units_added, units_updated, bookings_cancelled, affected_booking_ids = process_ics_calendar(
-                    calendar_data,
-                    source.unit_id,
-                    source.source_name,
-                    source.source_identifier or source.source_name
+                # Download the ICS file with timeout and better error handling
+                headers = {
+                    'User-Agent': 'PropertyHub Calendar Sync/1.0',
+                    'Accept': 'text/calendar,application/calendar,text/plain,*/*'
+                }
+
+                response = requests.get(
+                    source.source_url,
+                    timeout=30,
+                    headers=headers,
+                    allow_redirects=True
                 )
 
-                # Update the last_updated timestamp
-                source.last_updated = datetime.utcnow()
-                db.session.commit()
+                print(f"Response status: {response.status_code}")
 
-                sync_success_count += 1
-                print(
-                    f"Successfully synced {source.source_identifier or source.source_name} for unit {source.unit.unit_number}")
-                print(f"  - Added: {units_added}, Updated: {units_updated}, Cancelled: {bookings_cancelled}")
+                if response.status_code == 200:
+                    calendar_data = response.text
+                    print(f"Downloaded calendar data, length: {len(calendar_data)}")
 
-            else:
-                print(f"Failed to download calendar from {source.source_url} - HTTP {response.status_code}")
+                    # Get the admin user for this company
+                    admin_user = User.query.filter_by(
+                        company_id=source.unit.company_id,
+                        is_admin=True
+                    ).first()
+
+                    if not admin_user:
+                        # Fallback: get any user from the same company
+                        admin_user = User.query.filter_by(
+                            company_id=source.unit.company_id
+                        ).first()
+
+                    if not admin_user:
+                        error_msg = f"No user found for company {source.unit.company_id}"
+                        print(f"Error: {error_msg}")
+                        source_result['error'] = error_msg
+                        sync_error_count += 1
+                        sync_results.append(source_result)
+                        continue
+
+                    # FIXED: Pass the user_id instead of trying to login
+                    units_added, units_updated, bookings_cancelled, affected_booking_ids = process_ics_calendar_scheduled(
+                        calendar_data,
+                        source.unit_id,
+                        source.source_name,
+                        source.source_identifier or source.source_name,
+                        admin_user.id  # Pass user ID instead of logging in
+                    )
+
+                    # Update the last_updated timestamp
+                    source.last_updated = datetime.utcnow()
+                    db.session.commit()
+
+                    # Record results
+                    source_result.update({
+                        'success': True,
+                        'added': units_added,
+                        'updated': units_updated,
+                        'cancelled': bookings_cancelled
+                    })
+
+                    sync_success_count += 1
+                    print(f"✓ Successfully synced {source.source_identifier or source.source_name} for unit {source.unit.unit_number}")
+                    print(f"  - Added: {units_added}, Updated: {units_updated}, Cancelled: {bookings_cancelled}")
+
+                else:
+                    error_msg = f"HTTP {response.status_code}: {response.text[:200]}"
+                    print(f"Failed to download calendar from {source.source_url} - {error_msg}")
+                    source_result['error'] = error_msg
+                    sync_error_count += 1
+
+            except requests.exceptions.Timeout:
+                error_msg = "Request timeout (30s)"
+                print(f"Timeout while syncing calendar for {source.unit.unit_number if source.unit else 'Unknown Unit'}")
+                source_result['error'] = error_msg
                 sync_error_count += 1
 
-        except requests.exceptions.Timeout:
-            print(
-                f"Timeout while syncing calendar for {source.unit.unit_number if source.unit else 'Unknown Unit'} from {source.source_identifier or source.source_name}")
-            sync_error_count += 1
-        except Exception as e:
-            print(
-                f"Error syncing calendar for {source.unit.unit_number if source.unit else 'Unknown Unit'} from {source.source_identifier or source.source_name}: {str(e)}")
-            sync_error_count += 1
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                print(f"Error syncing calendar for {source.unit.unit_number if source.unit else 'Unknown Unit'}: {error_msg}")
+                import traceback
+                traceback.print_exc()
+                source_result['error'] = error_msg
+                sync_error_count += 1
 
-    print(f"Calendar sync completed. Success: {sync_success_count}, Errors: {sync_error_count}")
+            finally:
+                sync_results.append(source_result)
+
+        print(f"Calendar sync completed. Success: {sync_success_count}, Errors: {sync_error_count}")
+
+        # Return detailed results
+        return {
+            "success": sync_error_count == 0,
+            "total_sources": len(calendar_sources),
+            "successful": sync_success_count,
+            "failed": sync_error_count,
+            "results": sync_results
+        }
+
+    except Exception as e:
+        error_msg = f"CRITICAL ERROR in sync_all_calendars: {str(e)}"
+        print(error_msg)
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": error_msg
+        }
 
 
 # FIXED: Initialize scheduler with Malaysia timezone
@@ -554,54 +676,6 @@ def init_scheduler(app):
     # Using Malaysia timezone for all cron jobs
     malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
 
-    # 0:40 AM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=0,
-        minute=40,
-        timezone=malaysia_tz,
-        id='sync_calendars_0.40am',
-        name='Calendar Sync - 0:40 AM',
-        replace_existing=True
-    )
-
-    # 0:45 AM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=0,
-        minute=45,
-        timezone=malaysia_tz,
-        id='sync_calendars_0.45am',
-        name='Calendar Sync - 0:45 AM',
-        replace_existing=True
-    )
-
-    # 0:50 AM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=0,
-        minute=50,
-        timezone=malaysia_tz,
-        id='sync_calendars_0.50am',
-        name='Calendar Sync - 0:50 AM',
-        replace_existing=True
-    )
-
-    # 0:55 AM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=0,
-        minute=55,
-        timezone=malaysia_tz,
-        id='sync_calendars_0.55am',
-        name='Calendar Sync - 0:55 AM',
-        replace_existing=True
-    )
-
     # 2:00 AM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
@@ -609,8 +683,19 @@ def init_scheduler(app):
         hour=2,
         minute=0,
         timezone=malaysia_tz,
-        id='sync_calendars_2am',
+        id='sync_calendars_200am',
         name='Calendar Sync - 2:00 AM',
+        replace_existing=True
+    )
+    # 9:00 AM (Noon) Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=9,
+        minute=0,
+        timezone=malaysia_tz,
+        id='sync_calendars_9am',
+        name='Calendar Sync - 9:00 AM',
         replace_existing=True
     )
 
@@ -626,6 +711,18 @@ def init_scheduler(app):
         replace_existing=True
     )
 
+    # 3:00 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=15,
+        minute=0,
+        timezone=malaysia_tz,
+        id='sync_calendars_300pm',
+        name='Calendar Sync - 3:00 PM',
+        replace_existing=True
+    )
+
     # 6:00 PM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
@@ -633,44 +730,32 @@ def init_scheduler(app):
         hour=18,
         minute=0,
         timezone=malaysia_tz,
-        id='sync_calendars_6pm',
+        id='sync_calendars_600pm',
         name='Calendar Sync - 6:00 PM',
         replace_existing=True
     )
 
-    # 7:52 PM Malaysia time
+    # 6:35 PM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
-        hour=19,
-        minute=52,
+        hour=18,
+        minute=35,
         timezone=malaysia_tz,
-        id='sync_calendars_752pm',
-        name='Calendar Sync - 7:52 PM',
+        id='sync_calendars_635pm',
+        name='Calendar Sync - 6:35 PM',
         replace_existing=True
     )
 
-    # 8:00 PM Malaysia time
+    # 9:00 PM Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
         trigger='cron',
-        hour=20,
+        hour=21,
         minute=0,
         timezone=malaysia_tz,
-        id='sync_calendars_800pm',
-        name='Calendar Sync - 8:00 PM',
-        replace_existing=True
-    )
-
-    # 8:30 PM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=20,
-        minute=30,
-        timezone=malaysia_tz,
-        id='sync_calendars_830pm',
-        name='Calendar Sync - 8:30 PM',
+        id='sync_calendars_900pm',
+        name='Calendar Sync - 9:00 PM',
         replace_existing=True
     )
 
@@ -688,16 +773,13 @@ def init_scheduler(app):
 
     print("Scheduler started successfully!")
     print("Calendar sync scheduled for:")
-    print("  - 0:40 AM Malaysia time")
-    print("  - 0:45 AM Malaysia time")
-    print("  - 0:50 AM Malaysia time")
-    print("  - 0:55 AM Malaysia time")
     print("  - 2:00 AM Malaysia time")
+    print("  - 9:00 AM Malaysia time")
     print("  - 12:00 PM Malaysia time")
+    print("  - 3:00 PM Malaysia time")
     print("  - 6:00 PM Malaysia time")
-    print("  - 7:52 PM Malaysia time")
-    print("  - 8:00 PM Malaysia time")
-    print("  - 8:30 PM Malaysia time")
+    print("  - 6:35 PM Malaysia time")
+    print("  - 9:00 PM Malaysia time")
     print("  - 11:55 PM Malaysia time")
 
     # OPTIONAL: Add a test job that runs every 5 minutes for debugging
