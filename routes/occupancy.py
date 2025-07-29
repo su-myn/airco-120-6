@@ -37,6 +37,9 @@ def occupancy():
     month = request.args.get('month', today.month, type=int)
     year = request.args.get('year', today.year, type=int)
 
+    # Set Monday as first day of week (0 = Monday, 6 = Sunday)
+    calendar.setfirstweekday(0)  # This ensures Monday is the first day
+
     # Create calendar data
     cal = calendar.monthcalendar(year, month)
     month_name = calendar.month_name[month]
@@ -67,6 +70,7 @@ def occupancy():
                            next_month=next_month,
                            next_year=next_year,
                            today=today)
+
 
 @occupancy_bp.route('/api/occupancy/<int:year>/<int:month>')
 @login_required
@@ -106,34 +110,56 @@ def get_occupancy_data(year, month):
     else:
         last_day = date(year, month + 1, 1) - timedelta(days=1)
 
-    # Get bookings that overlap with this month for accessible ACTIVE units only
+    # FIXED: Get bookings that overlap with this month for accessible ACTIVE units only
+    # The key issue was in the overlap condition - we need to include the check-out date
     bookings = BookingForm.query.filter(
         BookingForm.company_id == current_user.company_id,
         BookingForm.unit_id.in_(accessible_active_unit_ids),
+        BookingForm.is_cancelled != True,  # ADDED: Exclude cancelled bookings
         BookingForm.check_in_date <= last_day,
-        BookingForm.check_out_date >= first_day
+        BookingForm.check_out_date > first_day  # FIXED: Use > instead of >=
     ).all()
 
     # Calculate occupancy for each day of the month
-    calendar_days = calendar.monthcalendar(year, month)
-    days_in_month = len([day for week in calendar_days for day in week if day != 0])
+    import calendar as cal_module
+    calendar_days = cal_module.monthcalendar(year, month)
 
-    # Initialize occupancy data
+    # FIXED: Get all days in the month, not just from calendar grid
+    days_in_month = cal_module.monthrange(year, month)[1]
+
+    # Initialize occupancy data for ALL days in the month
     occupancy_data = {day: 0 for day in range(1, days_in_month + 1)}
 
-    # Count occupied units for each day
+    # FIXED: Count occupied units for each day with proper date logic
     for booking in bookings:
-        start_date = max(booking.check_in_date, first_day)
-        end_date = min(booking.check_out_date, last_day)
+        # For each day in the month, check if this booking covers that day
+        for day in range(1, days_in_month + 1):
+            current_date = date(year, month, day)
 
-        current_date = start_date
-        while current_date < end_date:  # Don't count checkout day
-            if current_date.month == month and current_date.year == year:
-                occupancy_data[current_date.day] += 1
-            current_date += timedelta(days=1)
+            # FIXED: A unit is occupied on a date if:
+            # check_in_date <= current_date < check_out_date
+            # This means guest checks in on check_in_date and checks out on check_out_date
+            # They occupy the unit on check_in_date but NOT on check_out_date
+            if booking.check_in_date <= current_date < booking.check_out_date:
+                occupancy_data[day] += 1
 
     # Get total accessible ACTIVE units
     total_units = len(accessible_active_unit_ids)
+
+    # Debug logging - you can remove this after fixing
+    print(f"DEBUG: Month {month}/{year}")
+    print(f"DEBUG: Total active units: {total_units}")
+    print(f"DEBUG: Found {len(bookings)} bookings")
+    print(f"DEBUG: Occupancy for day 31: {occupancy_data.get(31, 'N/A')}")
+
+    # Sample booking debug for day 31 (you can remove this)
+    if 31 in occupancy_data:
+        day_31_date = date(year, month, 31)
+        print(f"DEBUG: Checking bookings for {day_31_date}:")
+        for booking in bookings:
+            covers_day_31 = booking.check_in_date <= day_31_date < booking.check_out_date
+            print(
+                f"  Booking {booking.id}: {booking.check_in_date} to {booking.check_out_date}, covers day 31: {covers_day_31}")
 
     # Get holidays for this month (existing holiday logic remains the same)
     holiday_data = {}
