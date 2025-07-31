@@ -42,28 +42,24 @@
         font-size: 0.9rem;
     }
 
-    .analytics-card.occupancy h3 {
+    .analytics-card.occupancy h3, .analytics-card.occupancy-tomorrow h3 {
         color: #4CAF50;
     }
 
-    .analytics-card.check-ins h3 {
+    .analytics-card.check-ins h3, .analytics-card.upcoming h3 {
         color: #2196F3;
     }
 
     .analytics-card.checkouts-tomorrow h3 {
-        color: #FF5722; /* A distinct orange color */
+        color: #FF5722;
     }
 
-    .analytics-card.revenue h3 {
+    .analytics-card.revenue h3, .analytics-card.revenue-tomorrow h3 {
         color: #ee4d2d;
     }
 
     .analytics-card.staying h3 {
         color: #9C27B0;
-    }
-
-    .analytics-card.upcoming h3 {
-        color: #FF9800;
     }
 
     .analytics-card.past h3 {
@@ -164,7 +160,6 @@
         font-style: italic;
     }
 
-    /* Status indicators */
     .status-pending {
         display: inline-block;
         padding: 3px 8px;
@@ -181,7 +176,24 @@
         border-radius: 3px;
     }
 
-    /* Mobile Responsive Styles */
+    .status-cancelled {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #dc3545;
+        color: white;
+        border-radius: 3px;
+        text-decoration: line-through;
+    }
+
+    tr.cancelled-booking {
+        background-color: #fff8f8;
+        color: #999;
+    }
+
+    tr.cancelled-booking td {
+        text-decoration: line-through;
+    }
+
     @media (max-width: 768px) {
         .table-responsive {
             overflow-x: auto;
@@ -194,7 +206,6 @@
             font-size: 14px;
         }
 
-        /* Hide less important columns on small screens */
         .data-table .hide-on-mobile {
             display: none;
         }
@@ -214,7 +225,6 @@
 
     .highlight-row {
         background-color: #d4ffda;
-        /* animation: highlight 20s ease-out; */
     }
 
     .analytics-section {
@@ -229,94 +239,9 @@
         border-left: 3px solid #ee4d2d;
     }
 
-    .analytics-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .analytics-card {
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        padding: 15px;
-        flex: 1;
-        min-width: 150px;
-        text-align: center;
-        transition: transform 0.2s ease;
-    }
-
-    .analytics-card:hover {
-        transform: translateY(-3px);
-    }
-
-    .analytics-card h3 {
-        margin: 0 0 5px 0;
-        font-size: 1.8rem;
-        color: #ee4d2d;
-    }
-
-    .analytics-card p {
-        margin: 0;
-        color: #666;
-        font-size: 0.9rem;
-    }
-
-    .analytics-card.occupancy h3, .analytics-card.occupancy-tomorrow h3 {
-        color: #4CAF50;
-    }
-
-    .analytics-card.revenue h3, .analytics-card.revenue-tomorrow h3 {
-        color: #ee4d2d;
-    }
-
-    .analytics-card.check-ins h3, .analytics-card.upcoming h3 {
-        color: #2196F3;
-    }
-
-    .analytics-card.past h3, .analytics-card.checkouts-tomorrow h3 {
-        color: #FF5722;
-    }
-
-    .analytics-card.active {
-        box-shadow: 0 0 0 2px #ee4d2d;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .analytics-row {
-            flex-direction: column;
-        }
-
-        .analytics-card {
-            width: 100%;
-        }
-    }
-
-    /* Add this to your existing styles in bookings.html */
-    .status-cancelled {
-        display: inline-block;
-        padding: 3px 8px;
-        background-color: #dc3545;
-        color: white;
-        border-radius: 3px;
-        text-decoration: line-through;
-    }
-
-    tr.cancelled-booking {
-        background-color: #fff8f8;
-        color: #999;
-    }
-
-    tr.cancelled-booking td {
-        text-decoration: line-through;
-    }
-
     .notes-column {
         text-align: center;
-        position: relative; /* Ensure this is a positioning context */
+        position: relative;
     }
 
     .notes-icon {
@@ -336,21 +261,20 @@
         color: white;
         padding: 8px 12px;
         border-radius: 4px;
-        width: 200px; /* Fixed width to prevent vertical orientation */
+        width: 200px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        z-index: 1000; /* Higher z-index to appear above other elements */
+        z-index: 1000;
         text-align: left;
         word-wrap: break-word;
         display: none;
         font-size: 14px;
         line-height: 1.4;
-        top: 100%; /* Position below the icon by default */
+        top: 100%;
         left: 50%;
         transform: translateX(-50%);
         margin-top: 5px;
     }
 
-    /* Add a tooltip arrow */
     .notes-tooltip:after {
         content: "";
         position: absolute;
@@ -362,9 +286,107 @@
         border-color: transparent transparent #333 transparent;
     }
 
-    /* Show tooltip on hover */
     .notes-icon:hover .notes-tooltip {
         display: block;
+    }
+
+    /* Bulk selection styles */
+    .booking-checkbox,
+    #select-all-bookings {
+        transform: scale(1.2);
+        cursor: pointer;
+    }
+
+    #bulk-delete-btn {
+        transition: all 0.2s ease;
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 3px;
+        border: none;
+        background-color: #dc3545;
+        color: white;
+        cursor: pointer;
+        display: none;
+    }
+
+    #bulk-delete-btn:hover {
+        background-color: #c82333;
+        transform: scale(1.05);
+    }
+
+    #bulk-delete-btn:active {
+        transform: scale(0.95);
+    }
+
+    tr:has(.booking-checkbox:checked) {
+        background-color: #fff3cd !important;
+        border-left: 3px solid #ffc107;
+    }
+
+    tr:has(.booking-checkbox:checked):hover {
+        background-color: #ffeaa7 !important;
+    }
+
+    #bulk-delete-modal {
+        backdrop-filter: blur(2px);
+    }
+
+    #bulk-delete-modal > div {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+        animation: modalSlideIn 0.2s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .flash-message {
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    .flash-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .flash-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .data-table th:first-child,
+    .data-table td:first-child {
+        text-align: center;
+        vertical-align: middle;
+        width: 50px;
+        min-width: 50px;
+    }
+
+    tr.cancelled-booking:has(.booking-checkbox:checked) {
+        background-color: #f8d7da !important;
+        border-left: 3px solid #dc3545;
+    }
+
+    tr.highlight-row:has(.booking-checkbox:checked) {
+        background-color: #d1ecf1 !important;
+        border-left: 3px solid #17a2b8;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 </style>
 {% endblock %}
@@ -373,8 +395,6 @@
 <div id="bookings-section">
     <!-- Analytics Dashboard -->
     <div class="analytics-section">
-        <!-- First row: Today's cards -->
-        <!-- <h3 class="analytics-heading">Today</h3> -->
         <div class="analytics-row">
             <a href="{{ url_for('bookings.bookings_filter', filter_type='occupancy_current') }}" style="text-decoration: none; color: inherit; flex: 1;">
                 <div class="analytics-card occupancy {% if active_filter == 'occupancy_current' %}active{% endif %}">
@@ -402,8 +422,6 @@
             </a>
         </div>
 
-        <!-- Second row: Tomorrow's cards -->
-        <!-- <h3 class="analytics-heading">Tomorrow</h3> -->
         <div class="analytics-row">
             <a href="{{ url_for('bookings.bookings_filter', filter_type='occupancy_tomorrow') }}" style="text-decoration: none; color: inherit; flex: 1;">
                 <div class="analytics-card occupancy-tomorrow {% if active_filter == 'occupancy_tomorrow' %}active{% endif %}">
@@ -443,14 +461,11 @@
     </div>
     {% endif %}
 
-
-    <!-- Add this to bookings.html after the "Add New Booking" button -->
     {% if current_user.has_permission('can_manage_bookings') %}
     <a href="{{ url_for('bookings.add_booking') }}" class="add-btn">+ Add New Booking</a>
     <a href="{{ url_for('calendar.import_ics') }}" class="add-btn" style="background-color: #28a745; margin-top: 10px;">
         <i class="calendar-icon"></i> Import Calendar (ICS)
     </a>
-
 
     <div style="display: flex; gap: 10px; margin-top: 10px;">
       <a href="https://www.airbnb.com/hosting/reservations" target="_blank" class="add-btn" style="background-color: #FF5A5F;">
@@ -462,9 +477,7 @@
     </div>
     {% endif %}
 
-    <!-- Add PapaParse library for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <!-- The import functionality JavaScript will be loaded at the bottom of the file -->
 
     <div class="search-container">
         <input type="text" id="booking-search" class="search-input" placeholder="Search bookings...">
@@ -551,22 +564,32 @@
         <table class="data-table" id="booking-table">
             <thead>
                 <tr>
-                    <th onclick="sortTable('booking', 0)">Guest Name</th>
-                    <th onclick="sortTable('booking', 1)">Contact</th>
-                    <th onclick="sortTable('booking', 2)">Unit</th>
-                    <th onclick="sortTable('booking', 3)">Check-in</th>
-                    <th onclick="sortTable('booking', 4)">Check-out</th>
-                    <th onclick="sortTable('booking', 5)">Nights</th>
-                    <th onclick="sortTable('booking', 6)">Guests</th>
-                    <th onclick="sortTable('booking', 7)">Confirmation Code</th>
-                    <th onclick="sortTable('booking', 8)">Adults</th>
-                    <th onclick="sortTable('booking', 9)">Children</th>
-                    <th onclick="sortTable('booking', 10)">Infants</th>
-                    <th onclick="sortTable('booking', 11)">Booking Date</th>
-                    <th onclick="sortTable('booking', 12)">Price</th>
-                    <th onclick="sortTable('booking', 13)">Source</th>
-                    <th onclick="sortTable('booking', 14)">Payment Status</th>
-                    <th onclick="sortTable('booking', 15)">Notes</th>
+                    <th style="width: 50px; text-align: center;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            <input type="checkbox" id="select-all-bookings" title="Select All">
+                            <button id="bulk-delete-btn"
+                                    style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; display: none; font-size: 12px;"
+                                    title="Delete Selected">
+                                🗑️
+                            </button>
+                        </div>
+                    </th>
+                    <th onclick="sortTable('booking', 1)">Guest Name</th>
+                    <th onclick="sortTable('booking', 2)">Contact</th>
+                    <th onclick="sortTable('booking', 3)">Unit</th>
+                    <th onclick="sortTable('booking', 4)">Check-in</th>
+                    <th onclick="sortTable('booking', 5)">Check-out</th>
+                    <th onclick="sortTable('booking', 6)">Nights</th>
+                    <th onclick="sortTable('booking', 7)">Guests</th>
+                    <th onclick="sortTable('booking', 8)">Confirmation Code</th>
+                    <th onclick="sortTable('booking', 9)">Adults</th>
+                    <th onclick="sortTable('booking', 10)">Children</th>
+                    <th onclick="sortTable('booking', 11)">Infants</th>
+                    <th onclick="sortTable('booking', 12)">Booking Date</th>
+                    <th onclick="sortTable('booking', 13)">Price</th>
+                    <th onclick="sortTable('booking', 14)">Source</th>
+                    <th onclick="sortTable('booking', 15)">Payment Status</th>
+                    <th onclick="sortTable('booking', 16)">Notes</th>
                     {% if current_user.has_permission('can_manage_bookings') %}
                     <th>Actions</th>
                     {% endif %}
@@ -575,6 +598,11 @@
             <tbody>
                 {% for booking in bookings %}
                 <tr id="booking-row-{{ booking.id }}" {% if booking.is_cancelled %}class="cancelled-booking"{% endif %}>
+                    <td style="text-align: center;">
+                        <input type="checkbox"
+                               class="booking-checkbox"
+                               data-booking-id="{{ booking.id }}">
+                    </td>
                     <td>{{ booking.guest_name }}</td>
                     <td>{{ booking.contact_number }}</td>
                     <td>{{ booking.unit.unit_number }}</td>
@@ -619,12 +647,34 @@
         </table>
         <div id="booking-no-results" class="no-results" style="display: none;">No results found</div>
     </div>
+
+    <!-- Bulk Delete Confirmation Modal -->
+    <div id="bulk-delete-modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 400px; max-width: 90%;">
+            <h3 id="modal-title" style="margin-top: 0; color: #dc3545;">Confirm Bulk Delete</h3>
+            <p id="modal-message">Are you sure you want to delete <span id="selected-count">0</span> selected booking(s)?</p>
+            <p id="modal-warning" style="color: #666; font-size: 14px;">This action cannot be undone.</p>
+            <div id="modal-buttons" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button onclick="closeBulkDeleteModal()"
+                        style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    Cancel
+                </button>
+                <button onclick="confirmBulkDelete()"
+                        style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    Delete Selected
+                </button>
+            </div>
+            <div id="modal-loading" style="display: none; text-align: center; margin: 20px 0;">
+                <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #dc3545; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    // FIXED: Check for highlighted bookings from the API on page load
+    // FIXED: Enhanced bulk delete functionality with proper cleanup
     document.addEventListener('DOMContentLoaded', function() {
-        // Check for highlighted bookings from the server session
+        // Check for highlighted bookings from the API on page load
         checkForHighlightedBookings();
 
         // Also check URL parameters for backward compatibility
@@ -632,23 +682,345 @@
         const highlightParam = urlParams.get('highlight_ids') || urlParams.get('highlight_id');
 
         if (highlightParam) {
-            // Check if it's multiple IDs (comma-separated) or a single ID
             const highlightIds = highlightParam.includes(',')
                 ? highlightParam.split(',')
                 : [highlightParam];
 
-            // Highlight each booking row
             highlightIds.forEach(id => {
                 const row = document.getElementById('booking-row-' + id);
                 if (row) {
                     row.classList.add('highlight-row');
-
-                    // Scroll to the first highlighted row
                     if (id === highlightIds[0]) {
                         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }
             });
+        }
+
+        // Initialize bulk delete functionality
+        initializeBulkDelete();
+    });
+
+    function initializeBulkDelete() {
+        const selectAllCheckbox = document.getElementById('select-all-bookings');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+
+        if (selectAllCheckbox) {
+            // Remove any existing event listeners first
+            selectAllCheckbox.removeEventListener('change', handleSelectAll);
+            selectAllCheckbox.addEventListener('change', handleSelectAll);
+        }
+
+        if (bulkDeleteBtn) {
+            // Remove any existing event listeners first
+            bulkDeleteBtn.removeEventListener('click', handleBulkDeleteClick);
+            bulkDeleteBtn.addEventListener('click', handleBulkDeleteClick);
+        }
+
+        // Initialize individual checkboxes
+        initializeIndividualCheckboxes();
+    }
+
+    // Separate handler functions to avoid closure issues
+    function handleSelectAll() {
+        const isChecked = this.checked;
+        const visibleCheckboxes = getVisibleBookingCheckboxes();
+
+        visibleCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+
+        updateBulkDeleteButton();
+    }
+
+    function handleBulkDeleteClick() {
+        showBulkDeleteModal();
+    }
+
+    function initializeIndividualCheckboxes() {
+        // Remove existing listeners and add new ones for all checkboxes
+        const checkboxes = document.querySelectorAll('.booking-checkbox');
+        checkboxes.forEach(checkbox => {
+            // Remove existing listener
+            checkbox.removeEventListener('change', updateBulkDeleteButton);
+            // Add new listener
+            checkbox.addEventListener('change', updateBulkDeleteButton);
+        });
+    }
+
+    function getVisibleBookingCheckboxes() {
+        const checkboxes = document.querySelectorAll('.booking-checkbox');
+        return Array.from(checkboxes).filter(checkbox => {
+            const row = checkbox.closest('tr');
+            return row && row.style.display !== 'none';
+        });
+    }
+
+    function getSelectedBookingIds() {
+        const checkboxes = document.querySelectorAll('.booking-checkbox:checked');
+        return Array.from(checkboxes).map(checkbox => checkbox.dataset.bookingId);
+    }
+
+    function updateBulkDeleteButton() {
+        const selectAllCheckbox = document.getElementById('select-all-bookings');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+        const selectedIds = getSelectedBookingIds();
+        const visibleCheckboxes = getVisibleBookingCheckboxes();
+        const selectedVisibleCount = visibleCheckboxes.filter(cb => cb.checked).length;
+
+        // Show/hide delete button based on selection
+        if (selectedIds.length > 0) {
+            bulkDeleteBtn.style.display = 'inline-block';
+            bulkDeleteBtn.textContent = `🗑️ (${selectedIds.length})`;
+        } else {
+            bulkDeleteBtn.style.display = 'none';
+        }
+
+        // Update select all checkbox state
+        if (selectedVisibleCount === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+        } else if (selectedVisibleCount === visibleCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+        } else {
+            selectAllCheckbox.indeterminate = true;
+            selectAllCheckbox.checked = false;
+        }
+    }
+
+    function showBulkDeleteModal() {
+        const selectedIds = getSelectedBookingIds();
+
+        // FIXED: Add validation to prevent showing modal with no selections
+        if (selectedIds.length === 0) {
+            console.warn('No bookings selected for deletion');
+            return;
+        }
+
+        const modal = document.getElementById('bulk-delete-modal');
+        const countSpan = document.getElementById('selected-count');
+
+        if (!modal) {
+            console.error('Bulk delete modal not found');
+            return;
+        }
+
+        if (!countSpan) {
+            console.error('Selected count span not found');
+            return;
+        }
+
+        countSpan.textContent = selectedIds.length;
+        modal.style.display = 'block';
+    }
+
+    function closeBulkDeleteModal() {
+        const modal = document.getElementById('bulk-delete-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    function confirmBulkDelete() {
+        const selectedIds = getSelectedBookingIds();
+
+        if (selectedIds.length === 0) {
+            closeBulkDeleteModal();
+            return;
+        }
+
+        // Get modal elements by ID (they now have IDs)
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalWarning = document.getElementById('modal-warning');
+        const modalButtons = document.getElementById('modal-buttons');
+        const modalLoading = document.getElementById('modal-loading');
+
+        // Show loading state
+        modalTitle.textContent = 'Deleting...';
+        modalMessage.textContent = 'Please wait while we delete the selected bookings.';
+        modalWarning.style.display = 'none';
+        modalButtons.style.display = 'none';
+        modalLoading.style.display = 'block';
+
+        // Send delete request
+        fetch('/api/bulk_delete_bookings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                booking_ids: selectedIds
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove deleted rows from the table
+                selectedIds.forEach(id => {
+                    const row = document.getElementById(`booking-row-${id}`);
+                    if (row) {
+                        row.remove();
+                    }
+                });
+
+                // Reset all form state after successful deletion
+                resetBulkDeleteState();
+                closeBulkDeleteModal();
+
+                // Restore modal to original state for next use
+                restoreModalToOriginalState();
+
+                // Show success message
+                showFlashMessage(`Successfully deleted ${data.deleted_count} booking(s)`, 'success');
+
+                // Check if no results remain
+                checkForNoResults();
+            } else {
+                // Restore modal to original state on error
+                restoreModalToOriginalState();
+                showFlashMessage(data.message || 'Error deleting bookings', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Restore modal to original state on network error
+            restoreModalToOriginalState();
+            showFlashMessage('Network error while deleting bookings', 'danger');
+        });
+    }
+
+    function restoreModalToOriginalState() {
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalWarning = document.getElementById('modal-warning');
+        const modalButtons = document.getElementById('modal-buttons');
+        const modalLoading = document.getElementById('modal-loading');
+
+        // Restore original state
+        modalTitle.textContent = 'Confirm Bulk Delete';
+        modalMessage.innerHTML = 'Are you sure you want to delete <span id="selected-count">0</span> selected booking(s)?';
+        modalWarning.style.display = 'block';
+        modalWarning.textContent = 'This action cannot be undone.';
+        modalButtons.style.display = 'flex';
+        modalLoading.style.display = 'none';
+    }
+
+    // FIXED: New function to properly reset bulk delete state
+    function resetBulkDeleteState() {
+        // Clear all checkbox selections
+        const checkboxes = document.querySelectorAll('.booking-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        // Reset select all checkbox
+        const selectAllCheckbox = document.getElementById('select-all-bookings');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+
+        // Hide bulk delete button
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.style.display = 'none';
+        }
+
+        // FIXED: Reinitialize event listeners to prevent stale references
+        setTimeout(() => {
+            initializeIndividualCheckboxes();
+        }, 100);
+    }
+
+    function showFlashMessage(message, type) {
+        // Create a flash message element
+        const flashContainer = document.querySelector('.flash-messages') || document.body;
+        const flashMessage = document.createElement('div');
+        flashMessage.className = `flash-message flash-${type}`;
+        flashMessage.textContent = message;
+
+        // Add to page
+        if (flashContainer.classList && flashContainer.classList.contains('flash-messages')) {
+            flashContainer.appendChild(flashMessage);
+        } else {
+            flashMessage.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1001;
+                padding: 12px 20px; border-radius: 4px; color: white; font-weight: 500;
+                background-color: ${type === 'success' ? '#28a745' : '#dc3545'};
+            `;
+            document.body.appendChild(flashMessage);
+        }
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            flashMessage.remove();
+        }, 5000);
+    }
+
+    function checkForNoResults() {
+        const table = document.getElementById('booking-table');
+        const noResults = document.getElementById('booking-no-results');
+        const visibleRows = Array.from(table.querySelectorAll('tbody tr')).filter(row =>
+            row.style.display !== 'none' && !row.id.includes('update-form')
+        );
+
+        if (visibleRows.length === 0) {
+            noResults.style.display = 'block';
+        } else {
+            noResults.style.display = 'none';
+        }
+    }
+
+    // FIXED: Enhanced search and filter functions that properly reinitialize checkboxes
+    const originalSearchTable = window.searchTable;
+    window.searchTable = function(type) {
+        if (originalSearchTable) {
+            originalSearchTable(type);
+        }
+        // Reinitialize checkbox event listeners after search
+        setTimeout(() => {
+            initializeIndividualCheckboxes();
+            updateBulkDeleteButton();
+        }, 10);
+    };
+
+    const originalApplyBookingFilters = window.applyBookingFilters;
+    window.applyBookingFilters = function() {
+        if (originalApplyBookingFilters) {
+            originalApplyBookingFilters();
+        }
+        // Reinitialize checkbox event listeners after filtering
+        setTimeout(() => {
+            initializeIndividualCheckboxes();
+            updateBulkDeleteButton();
+        }, 10);
+    };
+
+    const originalResetSearch = window.resetSearch;
+    window.resetSearch = function(type) {
+        if (originalResetSearch) {
+            originalResetSearch(type);
+        }
+        // Clear all selections and reinitialize when resetting
+        setTimeout(() => {
+            resetBulkDeleteState();
+        }, 10);
+    };
+
+    // FIXED: Enhanced modal close handlers
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('bulk-delete-modal');
+        if (event.target === modal) {
+            closeBulkDeleteModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeBulkDeleteModal();
         }
     });
 
@@ -659,16 +1031,16 @@
             .then(response => response.json())
             .then(data => {
                 if (data.highlight_ids && data.highlight_ids.length > 0) {
-                    console.log('Highlighting booking IDs:', data.highlight_ids); // Debug log
+                    console.log('Highlighting booking IDs:', data.highlight_ids);
 
                     // Apply highlighting to each row
                     data.highlight_ids.forEach(id => {
                         const row = document.getElementById('booking-row-' + id);
                         if (row) {
                             row.classList.add('highlight-row');
-                            console.log('Highlighted row for booking ID:', id); // Debug log
+                            console.log('Highlighted row for booking ID:', id);
                         } else {
-                            console.log('Row not found for booking ID:', id); // Debug log
+                            console.log('Row not found for booking ID:', id);
                         }
                     });
 
@@ -725,6 +1097,11 @@
         } else {
             noResults.style.display = "block";
         }
+
+        // Update bulk selection state after search
+        setTimeout(() => {
+            updateBulkDeleteButton();
+        }, 10);
     }
 
     function resetSearch(type) {
@@ -750,6 +1127,12 @@
         for (let i = 0; i < headers.length; i++) {
             headers[i].classList.remove('sorted-asc', 'sorted-desc');
         }
+
+        // Clear all selections when resetting
+        document.querySelectorAll('.booking-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateBulkDeleteButton();
     }
 
     // Sort Function
@@ -799,8 +1182,8 @@
                 let compareX = x.textContent.toLowerCase();
                 let compareY = y.textContent.toLowerCase();
 
-                // Special sorting for date columns
-                if (columnIndex === 3 || columnIndex === 4 || columnIndex === 11) {
+                // Special sorting for date columns (adjusted indices for checkbox column)
+                if (columnIndex === 4 || columnIndex === 5 || columnIndex === 12) { // Check-in, Check-out, Booking Date
                     compareX = new Date(x.textContent);
                     compareY = new Date(y.textContent);
                 }
@@ -831,13 +1214,8 @@
     document.getElementById('booking-search')?.addEventListener('input', function() {
         searchTable('booking');
     });
-</script>
 
-<script>
-    // Existing searchTable, resetSearch, and sortTable functions remain unchanged
-
-    // Add this function to handle the Edit button click
-
+    // EDIT FORM FUNCTIONALITY
     function showUpdateForm(type, id) {
         // First, close any open update forms
         const existingForms = document.querySelectorAll('[id^="' + type + '-update-form-"]');
@@ -856,12 +1234,8 @@
 
                 // Create a form with all the booking fields
                 const formHTML = `
-                    <td colspan="14">
+                    <td colspan="18">
                         <form method="POST" action="/update_booking/${id}" class="update-form" style="background-color: #f0f8ff; padding: 15px; border-radius: 5px;">
-                            <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-
-                            </div>
-
                             <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                                 <div style="flex: 1;">
                                     <label for="unit_id-${id}" style="display: block; margin-bottom: 5px;">Unit *</label>
@@ -900,18 +1274,18 @@
                                     <label for="number_of_guests-${id}" style="display: block; margin-bottom: 5px;">Guests</label>
                                     <input type="number" id="number_of_guests-${id}" name="number_of_guests" min="1" value="${booking.number_of_guests}" disabled style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                                 </div>
-                                    <div style="flex: 1;">
-                                        <label for="adults-${id}" style="display: block; margin-bottom: 5px;">Adults</label>
-                                        <input type="number" id="adults-${id}" name="adults" min="0" value="${booking.adults || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <label for="children-${id}" style="display: block; margin-bottom: 5px;">Children</label>
-                                        <input type="number" id="children-${id}" name="children" min="0" value="${booking.children || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <label for="infants-${id}" style="display: block; margin-bottom: 5px;">Infants</label>
-                                        <input type="number" id="infants-${id}" name="infants" min="0" value="${booking.infants || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                    </div>
+                                <div style="flex: 1;">
+                                    <label for="adults-${id}" style="display: block; margin-bottom: 5px;">Adults</label>
+                                    <input type="number" id="adults-${id}" name="adults" min="0" value="${booking.adults || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label for="children-${id}" style="display: block; margin-bottom: 5px;">Children</label>
+                                    <input type="number" id="children-${id}" name="children" min="0" value="${booking.children || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label for="infants-${id}" style="display: block; margin-bottom: 5px;">Infants</label>
+                                    <input type="number" id="infants-${id}" name="infants" min="0" value="${booking.infants || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
                             </div>
 
                             <div style="display: flex; gap: 15px; margin-bottom: 15px;">
@@ -944,7 +1318,6 @@
                                 </div>
                             </div>
 
-                            <!-- New fields section -->
                             <div style="flex: 1;">
                                 <label for="notes-${id}" style="display: block; margin-bottom: 5px;">Notes</label>
                                 <input type="text" id="notes-${id}" name="notes" value="${booking.notes || ''}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -978,6 +1351,12 @@
                             unitSelect.appendChild(option);
                         });
                     });
+
+                // Add event listeners for guest calculation and date validation
+                setTimeout(() => {
+                    addDateValidationListeners(id);
+                    addGuestCalculationListeners(id);
+                }, 100);
             })
             .catch(error => console.error('Error:', error));
     }
@@ -989,10 +1368,289 @@
         }
     }
 
+    function addDateValidationListeners(id) {
+        const checkInInput = document.getElementById(`check_in_date-${id}`);
+        const checkOutInput = document.getElementById(`check_out_date-${id}`);
 
+        if (checkInInput && checkOutInput) {
+            // Validate when check-out date changes
+            checkOutInput.addEventListener('change', function() {
+                if (checkInInput.value && checkOutInput.value) {
+                    const checkIn = new Date(checkInInput.value);
+                    const checkOut = new Date(checkOutInput.value);
 
-    // This JavaScript will handle the CSV import functionality
+                    if (checkOut <= checkIn) {
+                        alert('Check-out date must be after check-in date');
+                        checkOutInput.value = '';
+                    }
+                }
+            });
 
+            // Also validate when check-in date changes if check-out date is already set
+            checkInInput.addEventListener('change', function() {
+                if (checkInInput.value && checkOutInput.value) {
+                    const checkIn = new Date(checkInInput.value);
+                    const checkOut = new Date(checkOutInput.value);
+
+                    if (checkOut <= checkIn) {
+                        alert('Check-out date must be after check-in date');
+                        checkOutInput.value = '';
+                    }
+                }
+            });
+        }
+    }
+
+    function addGuestCalculationListeners(id) {
+        const adultsInput = document.getElementById(`adults-${id}`);
+        const childrenInput = document.getElementById(`children-${id}`);
+        const infantsInput = document.getElementById(`infants-${id}`);
+        const totalGuestsInput = document.getElementById(`number_of_guests-${id}`);
+
+        function calculateTotalGuests() {
+            if (adultsInput && childrenInput && infantsInput && totalGuestsInput) {
+                const adults = parseInt(adultsInput.value) || 0;
+                const children = parseInt(childrenInput.value) || 0;
+                const infants = parseInt(infantsInput.value) || 0;
+                totalGuestsInput.value = adults + children + infants;
+            }
+        }
+
+        if (adultsInput) adultsInput.addEventListener('input', calculateTotalGuests);
+        if (childrenInput) childrenInput.addEventListener('input', calculateTotalGuests);
+        if (infantsInput) infantsInput.addEventListener('input', calculateTotalGuests);
+
+        // Initial calculation
+        calculateTotalGuests();
+    }
+
+    // NOTES TOOLTIP FUNCTIONALITY
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeNotesTooltips();
+    });
+
+    function initializeNotesTooltips() {
+        // Get all notes icons
+        const notesIcons = document.querySelectorAll('.notes-icon');
+
+        // For each icon, create a tooltip
+        notesIcons.forEach(icon => {
+            const notes = icon.getAttribute('data-notes');
+            if (notes) {
+                // Create tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'notes-tooltip';
+                tooltip.textContent = notes;
+                icon.appendChild(tooltip);
+
+                // Add event listener to adjust position if needed
+                icon.addEventListener('mouseenter', function() {
+                    const tooltip = icon.querySelector('.notes-tooltip');
+
+                    // Get positions
+                    const tooltipRect = tooltip.getBoundingClientRect();
+                    const windowWidth = window.innerWidth;
+
+                    // If tooltip goes off right edge, adjust position
+                    if (tooltipRect.right > windowWidth) {
+                        tooltip.style.left = 'auto';
+                        tooltip.style.right = '0';
+                        tooltip.style.transform = 'none';
+                    }
+
+                    // If we're close to the bottom of the viewport, show above instead
+                    if (tooltipRect.bottom > window.innerHeight - 20) {
+                        tooltip.style.top = 'auto';
+                        tooltip.style.bottom = '100%';
+                        tooltip.style.marginTop = '0';
+                        tooltip.style.marginBottom = '5px';
+                    }
+                });
+            }
+        });
+    }
+
+    // BOOKING FILTERS FUNCTIONALITY
+    document.getElementById('apply-filters-btn').addEventListener('click', function() {
+        applyBookingFilters();
+    });
+
+    function applyBookingFilters() {
+        const unitFilter = document.getElementById('filter-unit').value;
+        const sourceFilter = document.getElementById('filter-source').value;
+        const paymentFilter = document.getElementById('filter-payment').value;
+        const checkinFilter = document.getElementById('filter-checkin').value;
+        const checkoutFilter = document.getElementById('filter-checkout').value;
+        const bookingDateFilter = document.getElementById('filter-bookingdate').value;
+
+        const table = document.getElementById('booking-table');
+        const rows = table.getElementsByTagName('tr');
+        const noResults = document.getElementById('booking-no-results');
+
+        let found = false;
+
+        // Get current date for relative date filtering
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        // Skip header row (i=0)
+        for (let i = 1; i < rows.length; i++) {
+            let row = rows[i];
+            // Skip update form rows
+            if (row.id.includes('update-form')) continue;
+
+            const cells = row.getElementsByTagName('td');
+            if (cells.length === 0) continue;
+
+            // UPDATED COLUMN INDICES - Added +1 to account for checkbox column
+            const guestNameValue = cells[1].textContent.trim(); // Was 0, now 1
+            const unitValue = cells[3].textContent.trim(); // Was 2, now 3
+            const checkinValue = cells[4].textContent.trim(); // Was 3, now 4
+            const checkoutValue = cells[5].textContent.trim(); // Was 4, now 5
+            const sourceValue = cells[14].textContent.trim(); // Was 13, now 14
+            const paymentStatusValue = cells[15].textContent.trim(); // Was 14, now 15
+            const bookingDateValue = cells[12].textContent.trim(); // Was 11, now 12
+
+            // Parse dates for comparison
+            const checkinDate = parseDateString(checkinValue);
+            const checkoutDate = parseDateString(checkoutValue);
+            const bookingDate = parseDateString(bookingDateValue);
+
+            // Check each filter condition
+            let matchesUnit = unitFilter === '' || unitValue === unitFilter;
+            let matchesSource = sourceFilter === '' || sourceValue === sourceFilter;
+            let matchesPayment = paymentFilter === '' || paymentStatusValue.includes(paymentFilter);
+
+            // Check-in date filtering
+            let matchesCheckin = true;
+            if (checkinFilter) {
+                matchesCheckin = false;
+                if (checkinFilter === 'yesterday' && isSameDay(checkinDate, yesterday)) {
+                    matchesCheckin = true;
+                } else if (checkinFilter === 'today' && isSameDay(checkinDate, today)) {
+                    matchesCheckin = true;
+                } else if (checkinFilter === 'tomorrow' && isSameDay(checkinDate, tomorrow)) {
+                    matchesCheckin = true;
+                } else if (checkinFilter === 'upcoming' && checkinDate > today) {
+                    matchesCheckin = true;
+                } else if (checkinFilter === 'thismonth' &&
+                          checkinDate >= thisMonthStart &&
+                          checkinDate <= thisMonthEnd) {
+                    matchesCheckin = true;
+                }
+            }
+
+            // Check-out date filtering
+            let matchesCheckout = true;
+            if (checkoutFilter) {
+                matchesCheckout = false;
+                if (checkoutFilter === 'yesterday' && isSameDay(checkoutDate, yesterday)) {
+                    matchesCheckout = true;
+                } else if (checkoutFilter === 'today' && isSameDay(checkoutDate, today)) {
+                    matchesCheckout = true;
+                } else if (checkoutFilter === 'tomorrow' && isSameDay(checkoutDate, tomorrow)) {
+                    matchesCheckout = true;
+                } else if (checkoutFilter === 'upcoming' && checkoutDate > today) {
+                    matchesCheckout = true;
+                } else if (checkoutFilter === 'thismonth' &&
+                          checkoutDate >= thisMonthStart &&
+                          checkoutDate <= thisMonthEnd) {
+                    matchesCheckout = true;
+                }
+            }
+
+            // Booking date filtering
+            let matchesBookingDate = true;
+            if (bookingDateFilter && bookingDate) {
+                matchesBookingDate = false;
+                if (bookingDateFilter === 'yesterday' && isSameDay(bookingDate, yesterday)) {
+                    matchesBookingDate = true;
+                } else if (bookingDateFilter === 'today' && isSameDay(bookingDate, today)) {
+                    matchesBookingDate = true;
+                } else if (bookingDateFilter === 'thismonth' &&
+                          bookingDate >= thisMonthStart &&
+                          bookingDate <= thisMonthEnd) {
+                    matchesBookingDate = true;
+                }
+            }
+
+            // Show row only if it matches all selected filters
+            if (matchesUnit && matchesSource && matchesPayment && matchesCheckin &&
+                matchesCheckout && matchesBookingDate) {
+                row.style.display = "";
+                found = true;
+            } else {
+                row.style.display = "none";
+            }
+        }
+
+        // Show or hide no results message
+        if (found) {
+            noResults.style.display = "none";
+        } else {
+            noResults.style.display = "block";
+        }
+
+        // Update bulk selection state after filtering
+        setTimeout(() => {
+            updateBulkDeleteButton();
+        }, 10);
+    }
+
+    // Date parsing helper
+    function parseDateString(dateStr) {
+        if (!dateStr) return null;
+
+        // Expected format: "Feb 15, 2025"
+        const parts = dateStr.split(' ');
+        if (parts.length < 3) return null;
+
+        const monthStr = parts[0];
+        const dayStr = parts[1].replace(',', '');
+        const yearStr = parts[2];
+
+        const months = {
+            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        };
+
+        const month = months[monthStr];
+        if (month === undefined) return null;
+
+        const day = parseInt(dayStr);
+        const year = parseInt(yearStr);
+
+        return new Date(year, month, day);
+    }
+
+    // Helper to check if two dates represent the same day
+    function isSameDay(date1, date2) {
+        if (!date1 || !date2) return false;
+        return date1.getDate() === date2.getDate() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getFullYear() === date2.getFullYear();
+    }
+
+    // Update the reset function to include resetting these filters
+    document.querySelector('.reset-btn').addEventListener('click', function() {
+        // Reset all the filters in addition to search
+        document.getElementById('filter-unit').value = '';
+        document.getElementById('filter-source').value = '';
+        document.getElementById('filter-payment').value = '';
+        document.getElementById('filter-checkin').value = '';
+        document.getElementById('filter-checkout').value = '';
+        document.getElementById('filter-bookingdate').value = '';
+
+        resetSearch('booking');
+    });
+
+    // AIRBNB CSV IMPORT FUNCTIONALITY
     // Function to show the import modal
     function showImportModal() {
       const modal = document.getElementById('airbnb-import-modal');
@@ -1019,7 +1677,6 @@
     }
 
     // Process the CSV file when the import button is clicked
-    // Modify the processCSV function in bookings.html
     function processCSV() {
       const fileInput = document.getElementById('csv-file-input');
       const file = fileInput.files[0];
@@ -1103,7 +1760,6 @@
     }
 
     // Add this new function to send the parsed bookings to the server
-    // Add this new function to send the parsed bookings to the server
     function processCsvBookings(bookings) {
       // Create a notification to show processing status
       const notification = document.createElement('div');
@@ -1167,308 +1823,6 @@
         `;
       });
     }
-
-
-
-    // Function to display the imported data in the bookings table
-    function displayImportedData(bookings) {
-      if (!bookings || bookings.length === 0) return;
-
-      // Get the units to match against
-      fetch('/api/get_units')
-        .then(response => response.json())
-        .then(units => {
-          const unitMap = {};
-          units.forEach(unit => {
-            unitMap[unit.unit_number.toLowerCase()] = unit.id;
-          });
-
-          // Get the table and create table rows
-          const table = document.getElementById('booking-table');
-          const tbody = table.querySelector('tbody');
-
-          // Add each booking to the table
-          bookings.forEach(booking => {
-            // Try to find a matching unit
-            const unitId = findUnitId(booking.unit_number, unitMap);
-
-            if (!unitId) {
-              console.warn(`No matching unit found for "${booking.unit_number}"`);
-            }
-
-            // Create a new row
-            const tr = document.createElement('tr');
-            tr.className = 'imported-row';
-            tr.dataset.imported = 'true';
-
-            // Format the dates
-            const checkInDate = formatDateForDisplay(booking.check_in_date);
-            const checkOutDate = formatDateForDisplay(booking.check_out_date);
-
-            // Calculate nights
-            const nights = calculateNights(booking.check_in_date, booking.check_out_date);
-
-            // Use the guest name from CSV or default to "Airbnb Guest"
-            const guestName = booking.guest_name || "Airbnb Guest";
-
-            // Use the contact from CSV or default to "-"
-            const contact = booking.contact || "-";
-
-            // Set the row content
-            tr.innerHTML = `
-              <td>${guestName}</td>
-              <td>${contact}</td>
-              <td>${booking.unit_number}</td>
-              <td>${checkInDate}</td>
-              <td>${checkOutDate}</td>
-              <td>${nights}</td>
-              <td>2</td>
-              <td>${booking.price}</td>
-              <td>Airbnb</td>
-              <td><span class="status-pending">Pending</span></td>
-              ${document.querySelector('#booking-table th:last-child').textContent.trim() === 'Actions' ?
-                '<td><button class="action-btn" onclick="saveImportedBooking(this)">Save</button>' +
-                '<button class="action-btn" onclick="removeImportedRow(this)" style="color: #dc3545;">Remove</button></td>' : ''}
-            `;
-
-            // Store the unit ID as data attribute if found
-            if (unitId) {
-              tr.dataset.unitId = unitId;
-            }
-
-            // Add to table
-            tbody.appendChild(tr);
-          });
-
-          // Show a notification
-          const notification = document.createElement('div');
-          notification.className = 'import-notification';
-          notification.innerHTML = `
-            <div style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-              <span>Successfully imported ${bookings.length} bookings from Airbnb. Please review and save each booking.</span>
-              <button onclick="this.parentElement.remove()" style="background: none; border: none; color: #155724; cursor: pointer; font-weight: bold;">×</button>
-            </div>
-          `;
-
-          const searchContainer = document.querySelector('.search-container');
-          searchContainer.parentNode.insertBefore(notification, searchContainer);
-        })
-        .catch(error => {
-          console.error('Error fetching units:', error);
-          alert('Error matching units. Please check the console for details.');
-        });
-    }
-
-    // Helper function to find a unit ID based on the unit number from CSV
-    function findUnitId(unitNumber, unitMap) {
-      if (!unitNumber || !unitMap) return null;
-
-      // Try exact match
-      const exactMatchId = unitMap[unitNumber.toLowerCase()];
-      if (exactMatchId) return exactMatchId;
-
-      // Try to find a close match
-      const unitNumbers = Object.keys(unitMap);
-      for (const key of unitNumbers) {
-        if (key.includes(unitNumber.toLowerCase()) || unitNumber.toLowerCase().includes(key)) {
-          return unitMap[key];
-        }
-      }
-
-      return null;
-    }
-
-    // Helper function to format dates for display
-    function formatDateForDisplay(dateStr) {
-      if (!dateStr) return '';
-
-      try {
-        // Parse the date string (handle various formats)
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return dateStr;  // Return original if invalid
-
-        // Format to MMM DD, YYYY
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-      } catch (e) {
-        console.error('Error formatting date:', e);
-        return dateStr;  // Return original if there's an error
-      }
-    }
-
-    // Helper function to calculate nights between two dates
-    function calculateNights(startDateStr, endDateStr) {
-      if (!startDateStr || !endDateStr) return 1;
-
-      try {
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(endDateStr);
-
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 1;
-
-        // Calculate difference in days
-        const diffTime = endDate.getTime() - startDate.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        return diffDays > 0 ? diffDays : 1;
-      } catch (e) {
-        console.error('Error calculating nights:', e);
-        return 1;
-      }
-    }
-
-    // Function to remove an imported row
-    function removeImportedRow(button) {
-      const row = button.closest('tr');
-      if (row) {
-        row.remove();
-      }
-    }
-
-    // Function to save an imported booking to the database
-    function saveImportedBooking(button) {
-      const row = button.closest('tr');
-      if (!row) return;
-
-      // Get the unit ID from the data attribute
-      const unitId = row.dataset.unitId;
-      if (!unitId) {
-        alert('Cannot save: No matching unit found. Please select a unit manually.');
-        return;
-      }
-
-      // Get data from the row
-      const cells = row.cells;
-
-      // Parse dates from display format back to YYYY-MM-DD
-      const checkInDisplay = cells[3].textContent;
-      const checkOutDisplay = cells[4].textContent;
-
-      // Convert dates back to YYYY-MM-DD format
-      const checkInDate = parseDisplayDate(checkInDisplay);
-      const checkOutDate = parseDisplayDate(checkOutDisplay);
-
-      if (!checkInDate || !checkOutDate) {
-        alert('Error with date format. Please check the dates.');
-        return;
-      }
-
-      // Get other fields
-      const guestName = cells[0].textContent; // Get guest name from first column
-      const contactNumber = cells[1].textContent; // Get contact from second column
-      const nights = cells[5].textContent;
-      const guests = cells[6].textContent;
-      const price = cells[7].textContent.replace(/[$€£¥,]/g, '').trim();
-
-      // Create form data
-      const formData = new FormData();
-      formData.append('guest_name', guestName);
-      formData.append('contact_number', contactNumber);
-      formData.append('check_in_date', checkInDate);
-      formData.append('check_out_date', checkOutDate);
-      formData.append('property_name', '');
-      formData.append('unit_id', unitId);
-      formData.append('number_of_nights', nights);
-      formData.append('number_of_guests', guests);
-      formData.append('price', price);
-      formData.append('booking_source', 'Airbnb');
-      formData.append('payment_status', 'Pending');
-      formData.append('notes', 'Imported from Airbnb CSV');
-
-      // Disable the button and show loading state
-      button.disabled = true;
-      button.textContent = 'Saving...';
-
-      // Send the POST request
-      fetch('/add_booking', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      })
-      .then(response => {
-        if (response.redirected) {
-          // Success! Change the row styling
-          row.style.backgroundColor = '#d4edda';
-
-          // Replace action buttons with "Saved" text
-          const actionsCell = cells[cells.length - 1];
-          actionsCell.innerHTML = '<span style="color: #28a745;">✓ Saved</span>';
-
-          // Clear the imported flag
-          row.dataset.imported = 'false';
-        } else {
-          throw new Error('Failed to save booking');
-        }
-      })
-      .catch(error => {
-        console.error('Error saving booking:', error);
-        alert('Error saving booking. Please check the data.');
-
-        // Reset button
-        button.disabled = false;
-        button.textContent = 'Save';
-      });
-    }
-
-    // Helper function to parse a display date back to YYYY-MM-DD
-    function parseDisplayDate(displayDate) {
-      if (!displayDate) return '';
-
-      try {
-        // Parse format like "Jan 15, 2025"
-        const parts = displayDate.split(' ');
-        if (parts.length !== 3) return '';
-
-        const monthStr = parts[0];
-        let dayStr = parts[1].replace(',', '');
-        const yearStr = parts[2];
-
-        // Convert month name to month number
-        const months = {
-          'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
-          'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-        };
-
-        const month = months[monthStr];
-        if (!month) return '';
-
-        // Ensure day has two digits
-        if (dayStr.length === 1) {
-          dayStr = '0' + dayStr;
-        }
-
-        return `${yearStr}-${month}-${dayStr}`;
-      } catch (e) {
-        console.error('Error parsing display date:', e);
-        return '';
-      }
-    }
-
-    // Event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-      // Create the modal and add it to the DOM
-      createImportModal();
-
-      // Add event listener to the import button
-      const importButton = document.getElementById('airbnb-import-btn');
-      if (importButton) {
-        importButton.addEventListener('click', showImportModal);
-      }
-
-      // Add event listener to the file input
-      const fileInput = document.getElementById('csv-file-input');
-      if (fileInput) {
-        fileInput.addEventListener('change', handleFileUpload);
-      }
-
-      // Add event listener to the process button
-      const processButton = document.getElementById('process-csv-btn');
-      if (processButton) {
-        processButton.addEventListener('click', processCSV);
-      }
-    });
 
     // Function to create the import modal
     function createImportModal() {
@@ -1599,308 +1953,28 @@
       document.head.appendChild(styleElement);
     }
 
-    // Real-time search
-    document.getElementById('booking-search')?.addEventListener('input', function() {
-        searchTable('booking');
-    });
-
-    // Add this to the existing JavaScript in bookings.html
-    function calculateTotalGuests(formId) {
-        const adultsInput = document.getElementById(`adults-${formId}`);
-        const childrenInput = document.getElementById(`children-${formId}`);
-        const infantsInput = document.getElementById(`infants-${formId}`);
-        const totalGuestsInput = document.getElementById(`number_of_guests-${formId}`);
-
-        if (adultsInput && childrenInput && infantsInput && totalGuestsInput) {
-            const adults = parseInt(adultsInput.value) || 0;
-            const children = parseInt(childrenInput.value) || 0;
-            const infants = parseInt(infantsInput.value) || 0;
-
-            totalGuestsInput.value = adults + children + infants;
-        }
-    }
-
-    // Add event listeners when the edit form is shown
-    function addGuestCalculationListeners(id) {
-        const adultsInput = document.getElementById(`adults-${id}`);
-        const childrenInput = document.getElementById(`children-${id}`);
-        const infantsInput = document.getElementById(`infants-${id}`);
-
-        if (adultsInput) adultsInput.addEventListener('input', () => calculateTotalGuests(id));
-        if (childrenInput) childrenInput.addEventListener('input', () => calculateTotalGuests(id));
-        if (infantsInput) infantsInput.addEventListener('input', () => calculateTotalGuests(id));
-
-        // Initial calculation
-        calculateTotalGuests(id);
-    }
-
-    // Modify the existing showUpdateForm function to add these listeners
-    const originalShowUpdateForm = showUpdateForm;
-    showUpdateForm = function(type, id) {
-        originalShowUpdateForm(type, id);
-
-        if (type === 'booking') {
-            // Add a slight delay to ensure the form is rendered
-            setTimeout(() => {
-                addDateValidationListeners(id);
-                addGuestCalculationListeners(id);
-            }, 100);
-        }
-    };
-
-    // Add this function to the existing JavaScript in bookings.html
-    function addDateValidationListeners(id) {
-        const checkInInput = document.getElementById(`check_in_date-${id}`);
-        const checkOutInput = document.getElementById(`check_out_date-${id}`);
-
-        if (checkInInput && checkOutInput) {
-            // Validate when check-out date changes
-            checkOutInput.addEventListener('change', function() {
-                if (checkInInput.value && checkOutInput.value) {
-                    const checkIn = new Date(checkInInput.value);
-                    const checkOut = new Date(checkOutInput.value);
-
-                    if (checkOut <= checkIn) {
-                        alert('Check-out date must be after check-in date');
-                        checkOutInput.value = '';
-                    }
-                }
-            });
-
-            // Also validate when check-in date changes if check-out date is already set
-            checkInInput.addEventListener('change', function() {
-                if (checkInInput.value && checkOutInput.value) {
-                    const checkIn = new Date(checkInInput.value);
-                    const checkOut = new Date(checkOutInput.value);
-
-                    if (checkOut <= checkIn) {
-                        alert('Check-out date must be after check-in date');
-                        checkOutInput.value = '';
-                    }
-                }
-            });
-        }
-    }
-</script>
-<script>
-    // Booking filters functionality
-    document.getElementById('apply-filters-btn').addEventListener('click', function() {
-        applyBookingFilters();
-    });
-
-    function applyBookingFilters() {
-        const unitFilter = document.getElementById('filter-unit').value;
-        const sourceFilter = document.getElementById('filter-source').value;
-        const paymentFilter = document.getElementById('filter-payment').value;
-        const checkinFilter = document.getElementById('filter-checkin').value;
-        const checkoutFilter = document.getElementById('filter-checkout').value;
-        const bookingDateFilter = document.getElementById('filter-bookingdate').value;
-
-        const table = document.getElementById('booking-table');
-        const rows = table.getElementsByTagName('tr');
-        const noResults = document.getElementById('booking-no-results');
-
-        let found = false;
-
-        // Get current date for relative date filtering
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-        // Skip header row (i=0)
-        for (let i = 1; i < rows.length; i++) {
-            let row = rows[i];
-            // Skip update form rows
-            if (row.id.includes('update-form')) continue;
-
-            const cells = row.getElementsByTagName('td');
-            if (cells.length === 0) continue;
-
-            const guestNameValue = cells[0].textContent.trim();
-            const unitValue = cells[2].textContent.trim();
-            const checkinValue = cells[3].textContent.trim();
-            const checkoutValue = cells[4].textContent.trim();
-            const sourceValue = cells[13].textContent.trim();
-            const paymentStatusValue = cells[14].textContent.trim();
-            const bookingDateValue = cells[11].textContent.trim(); // Based on your table structure
-
-            // Parse dates for comparison
-            const checkinDate = parseDateString(checkinValue);
-            const checkoutDate = parseDateString(checkoutValue);
-            const bookingDate = parseDateString(bookingDateValue);
-
-            // Check each filter condition
-            let matchesUnit = unitFilter === '' || unitValue === unitFilter;
-            let matchesSource = sourceFilter === '' || sourceValue === sourceFilter;
-            let matchesPayment = paymentFilter === '' || paymentStatusValue.includes(paymentFilter);
-
-            // Check-in date filtering
-            let matchesCheckin = true;
-            if (checkinFilter) {
-                matchesCheckin = false;
-                if (checkinFilter === 'yesterday' && isSameDay(checkinDate, yesterday)) {
-                    matchesCheckin = true;
-                } else if (checkinFilter === 'today' && isSameDay(checkinDate, today)) {
-                    matchesCheckin = true;
-                } else if (checkinFilter === 'tomorrow' && isSameDay(checkinDate, tomorrow)) {
-                    matchesCheckin = true;
-                } else if (checkinFilter === 'upcoming' && checkinDate > today) {
-                    matchesCheckin = true;
-                } else if (checkinFilter === 'thismonth' &&
-                          checkinDate >= thisMonthStart &&
-                          checkinDate <= thisMonthEnd) {
-                    matchesCheckin = true;
-                }
-            }
-
-            // Check-out date filtering
-            let matchesCheckout = true;
-            if (checkoutFilter) {
-                matchesCheckout = false;
-                if (checkoutFilter === 'yesterday' && isSameDay(checkoutDate, yesterday)) {
-                    matchesCheckout = true;
-                } else if (checkoutFilter === 'today' && isSameDay(checkoutDate, today)) {
-                    matchesCheckout = true;
-                } else if (checkoutFilter === 'tomorrow' && isSameDay(checkoutDate, tomorrow)) {
-                    matchesCheckout = true;
-                } else if (checkoutFilter === 'upcoming' && checkoutDate > today) {
-                    matchesCheckout = true;
-                } else if (checkoutFilter === 'thismonth' &&
-                          checkoutDate >= thisMonthStart &&
-                          checkoutDate <= thisMonthEnd) {
-                    matchesCheckout = true;
-                }
-            }
-
-            // Booking date filtering
-            let matchesBookingDate = true;
-            if (bookingDateFilter && bookingDate) {
-                matchesBookingDate = false;
-                if (bookingDateFilter === 'yesterday' && isSameDay(bookingDate, yesterday)) {
-                    matchesBookingDate = true;
-                } else if (bookingDateFilter === 'today' && isSameDay(bookingDate, today)) {
-                    matchesBookingDate = true;
-                } else if (bookingDateFilter === 'thismonth' &&
-                          bookingDate >= thisMonthStart &&
-                          bookingDate <= thisMonthEnd) {
-                    matchesBookingDate = true;
-                }
-            }
-
-            // Show row only if it matches all selected filters
-            if (matchesUnit && matchesSource && matchesPayment && matchesCheckin &&
-                matchesCheckout && matchesBookingDate) {
-                row.style.display = "";
-                found = true;
-            } else {
-                row.style.display = "none";
-            }
-        }
-
-        // Show or hide no results message
-        if (found) {
-            noResults.style.display = "none";
-        } else {
-            noResults.style.display = "block";
-        }
-    }
-
-    // Date parsing helper
-    function parseDateString(dateStr) {
-        if (!dateStr) return null;
-
-        // Expected format: "Feb 15, 2025"
-        const parts = dateStr.split(' ');
-        if (parts.length < 3) return null;
-
-        const monthStr = parts[0];
-        const dayStr = parts[1].replace(',', '');
-        const yearStr = parts[2];
-
-        const months = {
-            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-        };
-
-        const month = months[monthStr];
-        if (month === undefined) return null;
-
-        const day = parseInt(dayStr);
-        const year = parseInt(yearStr);
-
-        return new Date(year, month, day);
-    }
-
-    // Helper to check if two dates represent the same day
-    function isSameDay(date1, date2) {
-        if (!date1 || !date2) return false;
-        return date1.getDate() === date2.getDate() &&
-               date1.getMonth() === date2.getMonth() &&
-               date1.getFullYear() === date2.getFullYear();
-    }
-
-    // Update the reset function to include resetting these filters
-    document.querySelector('.reset-btn').addEventListener('click', function() {
-        // Reset all the filters in addition to search
-        document.getElementById('filter-unit').value = '';
-        document.getElementById('filter-source').value = '';
-        document.getElementById('filter-payment').value = '';
-        document.getElementById('filter-checkin').value = '';
-        document.getElementById('filter-checkout').value = '';
-        document.getElementById('filter-bookingdate').value = '';
-
-        resetSearch('booking');
-    });
-</script>
-<script>
-    // Initialize notes tooltips
+    // Event listeners for CSV import
     document.addEventListener('DOMContentLoaded', function() {
-        // Get all notes icons
-        const notesIcons = document.querySelectorAll('.notes-icon');
+      // Create the modal and add it to the DOM
+      createImportModal();
 
-        // For each icon, create a tooltip
-        notesIcons.forEach(icon => {
-            const notes = icon.getAttribute('data-notes');
-            if (notes) {
-                // Create tooltip
-                const tooltip = document.createElement('div');
-                tooltip.className = 'notes-tooltip';
-                tooltip.textContent = notes;
-                icon.appendChild(tooltip);
+      // Add event listener to the import button
+      const importButton = document.getElementById('airbnb-import-btn');
+      if (importButton) {
+        importButton.addEventListener('click', showImportModal);
+      }
 
-                // Add event listener to adjust position if needed
-                icon.addEventListener('mouseenter', function() {
-                    const tooltip = icon.querySelector('.notes-tooltip');
+      // Add event listener to the file input
+      const fileInput = document.getElementById('csv-file-input');
+      if (fileInput) {
+        fileInput.addEventListener('change', handleFileUpload);
+      }
 
-                    // Get positions
-                    const tooltipRect = tooltip.getBoundingClientRect();
-                    const windowWidth = window.innerWidth;
-
-                    // If tooltip goes off right edge, adjust position
-                    if (tooltipRect.right > windowWidth) {
-                        tooltip.style.left = 'auto';
-                        tooltip.style.right = '0';
-                        tooltip.style.transform = 'none';
-                    }
-
-                    // If we're close to the bottom of the viewport, show above instead
-                    if (tooltipRect.bottom > window.innerHeight - 20) {
-                        tooltip.style.top = 'auto';
-                        tooltip.style.bottom = '100%';
-                        tooltip.style.marginTop = '0';
-                        tooltip.style.marginBottom = '5px';
-
-                        // Reposition the arrow
-                        tooltip.style.setProperty('--arrow-position', 'bottom');
-                    }
-                });
-            }
-        });
+      // Add event listener to the process button
+      const processButton = document.getElementById('process-csv-btn');
+      if (processButton) {
+        processButton.addEventListener('click', processCSV);
+      }
     });
 </script>
 {% endblock %}

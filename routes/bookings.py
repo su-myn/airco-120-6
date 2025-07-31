@@ -974,3 +974,115 @@ def parse_date(date_str):
     # If all attempts fail, return None
     print(f"Could not parse date: {date_str}")
     return None
+
+
+@bookings_bp.route('/api/bulk_delete_bookings', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def bulk_delete_bookings():
+    """Bulk delete multiple bookings"""
+    try:
+        # Get the booking IDs from the request
+        data = request.get_json()
+        if not data or 'booking_ids' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'No booking IDs provided'
+            }), 400
+
+        booking_ids = data['booking_ids']
+
+        # Validate that booking_ids is a list and not empty
+        if not isinstance(booking_ids, list) or len(booking_ids) == 0:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid booking IDs format'
+            }), 400
+
+        # Convert to integers and validate
+        try:
+            booking_ids = [int(id) for id in booking_ids]
+        except (ValueError, TypeError):
+            return jsonify({
+                'success': False,
+                'message': 'Invalid booking ID format'
+            }), 400
+
+        # Get the bookings to delete with access control
+        bookings_to_delete = []
+        access_denied_count = 0
+
+        for booking_id in booking_ids:
+            booking = BookingForm.query.get(booking_id)
+
+            if not booking:
+                continue  # Skip non-existent bookings
+
+            # Check if the booking belongs to the user's company
+            if booking.company_id != current_user.company_id:
+                access_denied_count += 1
+                continue
+
+            # Check if user can access this unit
+            if not check_unit_access(booking.unit_id):
+                access_denied_count += 1
+                continue
+
+            bookings_to_delete.append(booking)
+
+        # If no valid bookings found
+        if len(bookings_to_delete) == 0:
+            if access_denied_count > 0:
+                return jsonify({
+                    'success': False,
+                    'message': f'Access denied to {access_denied_count} booking(s). No bookings were deleted.'
+                }), 403
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'No valid bookings found to delete'
+                }), 404
+
+        # Perform the bulk delete
+        deleted_count = 0
+        failed_deletes = []
+
+        for booking in bookings_to_delete:
+            try:
+                db.session.delete(booking)
+                deleted_count += 1
+            except Exception as e:
+                failed_deletes.append(booking.id)
+                print(f"Error deleting booking {booking.id}: {str(e)}")
+
+        # Commit the changes
+        try:
+            db.session.commit()
+
+            # Prepare response message
+            message = f'Successfully deleted {deleted_count} booking(s)'
+            if access_denied_count > 0:
+                message += f' (Access denied to {access_denied_count} booking(s))'
+            if failed_deletes:
+                message += f' (Failed to delete {len(failed_deletes)} booking(s))'
+
+            return jsonify({
+                'success': True,
+                'message': message,
+                'deleted_count': deleted_count,
+                'access_denied_count': access_denied_count,
+                'failed_count': len(failed_deletes)
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Database error while deleting bookings: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Unexpected error: {str(e)}'
+        }), 500
