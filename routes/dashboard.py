@@ -426,21 +426,20 @@ def get_earnings_data():
     else:
         filtered_unit_ids = accessible_unit_ids
 
-    # Get current date info
+    # FIXED: Use the same date calculation as bookings page
     now = datetime.now()
-    malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
-    now_local = now.replace(tzinfo=pytz.utc).astimezone(malaysia_tz)
 
-    # Calculate date range for current period
-    start_date, end_date = calculate_date_range(time_filter, now_local)
+    # Calculate date range for current period using local time (same as bookings page)
+    start_date, end_date = calculate_date_range_fixed(time_filter, now)
 
     # Calculate date range for previous period
-    prev_start_date, prev_end_date = calculate_previous_period_range(time_filter, now_local)
+    prev_start_date, prev_end_date = calculate_previous_period_range_fixed(time_filter, now)
 
     # Get expense data for current period with accessible unit filtering
     if time_filter in ['today', 'yesterday']:
-        current_data = calculate_daily_earnings(user_company_id, start_date, end_date, filtered_unit_ids)
-        previous_data = calculate_daily_earnings(user_company_id, prev_start_date, prev_end_date, filtered_unit_ids)
+        current_data = calculate_daily_earnings_fixed(user_company_id, start_date, end_date, filtered_unit_ids)
+        previous_data = calculate_daily_earnings_fixed(user_company_id, prev_start_date, prev_end_date,
+                                                       filtered_unit_ids)
     elif time_filter in ['this-week', 'last-week']:
         current_data = calculate_weekly_earnings(user_company_id, start_date, end_date, filtered_unit_ids)
         previous_data = calculate_weekly_earnings(user_company_id, prev_start_date, prev_end_date, filtered_unit_ids)
@@ -560,14 +559,21 @@ def calculate_previous_period_range(time_filter, now_local):
 def calculate_date_range(time_filter, now_local):
     """Calculate start and end dates based on time filter"""
 
+    # FIXED: Ensure we're working with Malaysia timezone consistently
+    print(f"DEBUG: calculate_date_range called with time_filter='{time_filter}', now_local={now_local}")
+
     if time_filter == 'today':
+        # FIXED: Use Malaysia timezone date boundaries
         start_date = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
         end_date = now_local.replace(hour=23, minute=59, second=59, microsecond=999999)
+        print(f"DEBUG: Today range - start: {start_date}, end: {end_date}")
 
     elif time_filter == 'yesterday':
+        # FIXED: Calculate yesterday in Malaysia timezone
         yesterday = now_local - timedelta(days=1)
         start_date = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
         end_date = yesterday.replace(hour=23, minute=59, second=59, microsecond=999999)
+        print(f"DEBUG: Yesterday range - start: {start_date}, end: {end_date}")
 
     elif time_filter == 'this-week':
         days_since_monday = now_local.weekday()
@@ -610,29 +616,222 @@ def calculate_date_range(time_filter, now_local):
         start_date = now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end_date = now_local.replace(hour=23, minute=59, second=59, microsecond=999999)
 
+    print(f"DEBUG: Final date range - start: {start_date.date()}, end: {end_date.date()}")
     return start_date, end_date
 
 
-def calculate_daily_earnings(company_id, start_date, end_date, unit_ids):
-    """Calculate earnings for daily periods using bookings and issues with unit filtering"""
+def calculate_daily_earnings_fixed(company_id, start_date, end_date, unit_ids):
+    """Calculate earnings for daily periods - FIXED to match bookings page exactly"""
 
-    # Base query for bookings revenue
+    print(f"DEBUG: calculate_daily_earnings_fixed - filtering for date: {start_date}")
+
+    # FIXED: Use exact same query as bookings page
     bookings_query = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(unit_ids),
-        BookingForm.check_in_date >= start_date.date(),
-        BookingForm.check_in_date <= end_date.date()
+        BookingForm.check_in_date == start_date  # Exact date match like bookings page
     )
 
     bookings = bookings_query.all()
     total_revenue = sum(float(booking.price) for booking in bookings if booking.price)
 
-    # Base query for issues costs
+    print(f"DEBUG: Found {len(bookings)} bookings for {start_date}, total revenue: {total_revenue}")
+
+    # For daily earnings, we don't usually have issues costs, so keep it simple
+    total_expenses = 0
+    expense_breakdown = []
+
+    return {
+        'revenue': total_revenue,
+        'total_expenses': total_expenses,
+        'net_income': total_revenue - total_expenses,
+        'expense_breakdown': expense_breakdown
+    }
+
+
+def calculate_date_range_fixed(time_filter, now):
+    """Calculate start and end dates based on time filter - FIXED to match bookings page"""
+
+    print(f"DEBUG: calculate_date_range_fixed called with time_filter='{time_filter}', now={now}")
+
+    if time_filter == 'today':
+        # FIXED: Use the same logic as bookings page
+        today = now.date()
+        start_date = today
+        end_date = today
+        print(f"DEBUG: Today - date: {today}")
+
+    elif time_filter == 'yesterday':
+        # FIXED: Use the same logic as bookings page
+        today = now.date()
+        yesterday = today - timedelta(days=1)
+        start_date = yesterday
+        end_date = yesterday
+        print(f"DEBUG: Yesterday - date: {yesterday}")
+
+    elif time_filter == 'this-week':
+        # FIXED: Calculate this week properly (Monday to Sunday of current week)
+        today = now.date()
+        days_since_monday = today.weekday()  # Monday = 0, Sunday = 6
+        monday_this_week = today - timedelta(days=days_since_monday)
+        sunday_this_week = monday_this_week + timedelta(days=6)
+        start_date = monday_this_week
+        end_date = sunday_this_week
+        print(f"DEBUG: This week - start: {start_date}, end: {end_date}")
+
+    elif time_filter == 'last-week':
+        # FIXED: Calculate last week properly (Monday to Sunday of previous week)
+        today = now.date()
+        days_since_monday = today.weekday()
+        monday_this_week = today - timedelta(days=days_since_monday)
+        sunday_last_week = monday_this_week - timedelta(days=1)
+        monday_last_week = sunday_last_week - timedelta(days=6)
+        start_date = monday_last_week
+        end_date = sunday_last_week
+        print(f"DEBUG: Last week - start: {start_date}, end: {end_date}")
+
+    elif time_filter == 'this-month':
+        import calendar
+        today = now.date()
+        start_date = today.replace(day=1)
+        # Get last day of current month
+        last_day_of_month = calendar.monthrange(today.year, today.month)[1]
+        end_date = today.replace(day=last_day_of_month)
+
+    elif time_filter == 'last-month':
+        today = now.date()
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        start_date = last_month_end.replace(day=1)
+        end_date = last_month_end
+
+    elif time_filter == 'this-year':
+        today = now.date()
+        start_date = today.replace(month=1, day=1)
+        end_date = today.replace(month=12, day=31)
+
+    elif time_filter == 'last-year':
+        today = now.date()
+        start_date = today.replace(year=today.year - 1, month=1, day=1)
+        end_date = today.replace(year=today.year - 1, month=12, day=31)
+
+    else:
+        # Default to this month
+        today = now.date()
+        start_date = today.replace(day=1)
+        end_date = today
+
+    print(f"DEBUG: Final date range - start: {start_date}, end: {end_date}")
+    return start_date, end_date
+
+
+def calculate_previous_period_range_fixed(time_filter, now):
+    """Calculate start and end dates for the previous period - FIXED"""
+
+    today = now.date()
+
+    if time_filter == 'today':
+        # Previous period is yesterday
+        yesterday = today - timedelta(days=1)
+        start_date = yesterday
+        end_date = yesterday
+
+    elif time_filter == 'yesterday':
+        # Previous period is day before yesterday
+        day_before = today - timedelta(days=2)
+        start_date = day_before
+        end_date = day_before
+
+    elif time_filter == 'this-week':
+        # Previous period is last week (Monday to Sunday of previous complete week)
+        days_since_monday = today.weekday()
+        monday_this_week = today - timedelta(days=days_since_monday)
+        sunday_last_week = monday_this_week - timedelta(days=1)
+        monday_last_week = sunday_last_week - timedelta(days=6)
+        start_date = monday_last_week
+        end_date = sunday_last_week
+
+    elif time_filter == 'last-week':
+        # Previous period is week before last week
+        days_since_monday = today.weekday()
+        monday_this_week = today - timedelta(days=days_since_monday)
+        sunday_last_week = monday_this_week - timedelta(days=1)
+        monday_last_week = sunday_last_week - timedelta(days=6)
+        # Week before last week
+        sunday_two_weeks_ago = monday_last_week - timedelta(days=1)
+        monday_two_weeks_ago = sunday_two_weeks_ago - timedelta(days=6)
+        start_date = monday_two_weeks_ago
+        end_date = sunday_two_weeks_ago
+
+    elif time_filter == 'this-month':
+        # Previous period is last month
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        start_date = last_month_end.replace(day=1)
+        end_date = last_month_end
+
+    elif time_filter == 'last-month':
+        # Previous period is month before last month
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        first_of_last_month = last_month_end.replace(day=1)
+        prev_month_end = first_of_last_month - timedelta(days=1)
+        start_date = prev_month_end.replace(day=1)
+        end_date = prev_month_end
+
+    elif time_filter == 'this-year':
+        # Previous period is last year
+        start_date = today.replace(year=today.year - 1, month=1, day=1)
+        end_date = today.replace(year=today.year - 1, month=12, day=31)
+
+    elif time_filter == 'last-year':
+        # Previous period is year before last year
+        start_date = today.replace(year=today.year - 2, month=1, day=1)
+        end_date = today.replace(year=today.year - 2, month=12, day=31)
+
+    else:
+        # Default to last month
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        start_date = last_month_end.replace(day=1)
+        end_date = last_month_end
+
+    return start_date, end_date
+
+
+def calculate_weekly_earnings(company_id, start_date, end_date, unit_ids):
+    """Calculate earnings for weekly periods - FIXED to sum up daily revenues"""
+
+    print(f"DEBUG: calculate_weekly_earnings - start_date: {start_date}, end_date: {end_date}")
+
+    # FIXED: For weekly periods, we need to sum up all check-ins within the date range
+    bookings_query = BookingForm.query.filter(
+        BookingForm.company_id == company_id,
+        BookingForm.unit_id.in_(unit_ids),
+        BookingForm.check_in_date >= start_date,
+        BookingForm.check_in_date <= end_date
+    )
+
+    bookings = bookings_query.all()
+    total_revenue = sum(float(booking.price) for booking in bookings if booking.price)
+
+    print(f"DEBUG: Found {len(bookings)} bookings for week {start_date} to {end_date}, total revenue: {total_revenue}")
+
+    # Base query for issues costs within the week
     issues_query = Issue.query.filter(
         Issue.company_id == company_id,
-        Issue.unit_id.in_(unit_ids),
-        Issue.date_added >= start_date,
-        Issue.date_added <= end_date,
+        Issue.unit_id.in_(unit_ids)
+    )
+
+    # For issues, we need to filter by datetime (date_added field)
+    # Convert dates to datetime for proper comparison
+    from datetime import datetime, time
+    start_datetime = datetime.combine(start_date, time.min)
+    end_datetime = datetime.combine(end_date, time.max)
+
+    issues_query = issues_query.filter(
+        Issue.date_added >= start_datetime,
+        Issue.date_added <= end_datetime,
         Issue.cost.isnot(None)
     )
 
@@ -671,31 +870,39 @@ def calculate_daily_earnings(company_id, start_date, end_date, unit_ids):
     }
 
 
-def calculate_weekly_earnings(company_id, start_date, end_date, unit_ids):
-    """Calculate earnings for weekly periods"""
-    # Similar to daily but aggregate over the week
-    return calculate_daily_earnings(company_id, start_date, end_date, unit_ids)
-
-
 def calculate_monthly_earnings(company_id, start_date, end_date, unit_ids):
-    """Calculate earnings for monthly periods using ExpenseData with unit filtering"""
+    """Calculate earnings for monthly periods using actual bookings for revenue and ExpenseData for expenses"""
 
+    print(f"DEBUG: calculate_monthly_earnings - start_date: {start_date}, end_date: {end_date}")
+
+    # REVENUE: Use actual bookings within the complete month range
+    bookings_query = BookingForm.query.filter(
+        BookingForm.company_id == company_id,
+        BookingForm.unit_id.in_(unit_ids),
+        BookingForm.check_in_date >= start_date,
+        BookingForm.check_in_date <= end_date
+    )
+
+    bookings = bookings_query.all()
+    total_revenue = sum(float(booking.price) for booking in bookings if booking.price)
+
+    print(f"DEBUG: Found {len(bookings)} bookings for month {start_date} to {end_date}, total revenue: {total_revenue}")
+
+    # EXPENSES: Use ExpenseData table (original logic)
     year = start_date.year
     month = start_date.month
 
-    # Base query for expense data
-    query = ExpenseData.query.filter(
+    expense_query = ExpenseData.query.filter(
         ExpenseData.company_id == company_id,
         ExpenseData.unit_id.in_(unit_ids),
         ExpenseData.year == year,
         ExpenseData.month == month
     )
 
-    monthly_expenses = query.all()
+    monthly_expenses = expense_query.all()
 
-    # Calculate totals (keep existing calculation logic)
+    # Calculate totals from ExpenseData (original calculation logic)
     totals = {
-        'revenue': 0,
         'total_expenses': 0,
         'rental': 0,
         'electricity': 0,
@@ -711,7 +918,6 @@ def calculate_monthly_earnings(company_id, start_date, end_date, unit_ids):
     }
 
     for expense in monthly_expenses:
-        sales = float(expense.sales or 0)
         rental = float(expense.rental or 0)
         electricity = float(expense.electricity or 0)
         water = float(expense.water or 0)
@@ -724,7 +930,6 @@ def calculate_monthly_earnings(company_id, start_date, end_date, unit_ids):
         replace = float(expense.replace or 0)
         other = float(expense.other or 0)
 
-        totals['revenue'] += sales
         totals['rental'] += rental
         totals['electricity'] += electricity
         totals['water'] += water
@@ -741,7 +946,7 @@ def calculate_monthly_earnings(company_id, start_date, end_date, unit_ids):
                                      internet + cleaner + laundry + supplies +
                                      repair + replace + other)
 
-    # Create expense breakdown
+    # Create expense breakdown (original logic)
     expense_breakdown = []
     categories = ['rental', 'electricity', 'water', 'sewage', 'internet', 'cleaner',
                   'laundry', 'supplies', 'repair', 'replace', 'other']
@@ -759,31 +964,44 @@ def calculate_monthly_earnings(company_id, start_date, end_date, unit_ids):
     expense_breakdown.sort(key=lambda x: x['amount'], reverse=True)
 
     return {
-        'revenue': totals['revenue'],
+        'revenue': total_revenue,
         'total_expenses': totals['total_expenses'],
-        'net_income': totals['revenue'] - totals['total_expenses'],
+        'net_income': total_revenue - totals['total_expenses'],
         'expense_breakdown': expense_breakdown
     }
 
 
 def calculate_yearly_earnings(company_id, start_date, end_date, unit_ids):
-    """Calculate earnings for yearly periods by aggregating monthly data with unit filtering"""
+    """Calculate earnings for yearly periods using actual bookings for revenue and ExpenseData for expenses"""
 
+    print(f"DEBUG: calculate_yearly_earnings - start_date: {start_date}, end_date: {end_date}")
+
+    # REVENUE: Use actual bookings within the complete year range
+    bookings_query = BookingForm.query.filter(
+        BookingForm.company_id == company_id,
+        BookingForm.unit_id.in_(unit_ids),
+        BookingForm.check_in_date >= start_date,
+        BookingForm.check_in_date <= end_date
+    )
+
+    bookings = bookings_query.all()
+    total_revenue = sum(float(booking.price) for booking in bookings if booking.price)
+
+    print(f"DEBUG: Found {len(bookings)} bookings for year {start_date} to {end_date}, total revenue: {total_revenue}")
+
+    # EXPENSES: Use ExpenseData table for all months in the year
     year = start_date.year
 
-    # Base query for all expense data for the year
-    query = ExpenseData.query.filter(
+    expense_query = ExpenseData.query.filter(
         ExpenseData.company_id == company_id,
         ExpenseData.unit_id.in_(unit_ids),
         ExpenseData.year == year
     )
 
-    yearly_expenses = query.all()
+    yearly_expenses = expense_query.all()
 
-    # Use the same calculation logic as monthly but for all months in the year
-    # (keep existing yearly calculation logic but filter by unit_ids)
+    # Calculate totals from ExpenseData (original calculation logic)
     totals = {
-        'revenue': 0,
         'total_expenses': 0,
         'rental': 0,
         'electricity': 0,
@@ -799,7 +1017,6 @@ def calculate_yearly_earnings(company_id, start_date, end_date, unit_ids):
     }
 
     for expense in yearly_expenses:
-        sales = float(expense.sales or 0)
         rental = float(expense.rental or 0)
         electricity = float(expense.electricity or 0)
         water = float(expense.water or 0)
@@ -812,7 +1029,6 @@ def calculate_yearly_earnings(company_id, start_date, end_date, unit_ids):
         replace = float(expense.replace or 0)
         other = float(expense.other or 0)
 
-        totals['revenue'] += sales
         totals['rental'] += rental
         totals['electricity'] += electricity
         totals['water'] += water
@@ -829,7 +1045,7 @@ def calculate_yearly_earnings(company_id, start_date, end_date, unit_ids):
                                      internet + cleaner + laundry + supplies +
                                      repair + replace + other)
 
-    # Create expense breakdown
+    # Create expense breakdown (original logic)
     expense_breakdown = []
     categories = ['rental', 'electricity', 'water', 'sewage', 'internet', 'cleaner',
                   'laundry', 'supplies', 'repair', 'replace', 'other']
@@ -847,8 +1063,8 @@ def calculate_yearly_earnings(company_id, start_date, end_date, unit_ids):
     expense_breakdown.sort(key=lambda x: x['amount'], reverse=True)
 
     return {
-        'revenue': totals['revenue'],
+        'revenue': total_revenue,
         'total_expenses': totals['total_expenses'],
-        'net_income': totals['revenue'] - totals['total_expenses'],
+        'net_income': total_revenue - totals['total_expenses'],
         'expense_breakdown': expense_breakdown
     }
