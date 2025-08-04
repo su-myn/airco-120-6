@@ -130,6 +130,36 @@
         font-weight: bold;
         display: inline-block;
     }
+
+    /* Add styles for the data table */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .data-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+
+    .action-btn {
+        color: #4169E1;
+        text-decoration: none;
+        margin-right: 10px;
+        cursor: pointer;
+    }
+
+    .action-btn:hover {
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -295,11 +325,11 @@
                                         {% endif %}
                                         {% if source.is_active %}
                                             <a href="#" class="action-btn"
-                                               onclick="toggleCalendarSource({{ source.id }}, false); return false;"
+                                               onclick="toggleCalendarSource({{ source.id }}, 'disable'); return false;"
                                                style="color: #fd7e14;">Disable</a>
                                         {% else %}
                                             <a href="#" class="action-btn"
-                                               onclick="toggleCalendarSource({{ source.id }}, true); return false;"
+                                               onclick="toggleCalendarSource({{ source.id }}, 'enable'); return false;"
                                                style="color: #28a745;">Enable</a>
                                         {% endif %}
                                         <a href="#" class="action-btn"
@@ -321,10 +351,9 @@
                     window.location.href = '{{ url_for("calendar.delete_calendar_source", source_id=0) }}'.replace('0', sourceId);
                 }
 
-                function toggleCalendarSource(sourceId, enable) {
-                    // You'll need to create this route
-                    const action = enable ? 'enable' : 'disable';
-                    window.location.href = `/calendar/toggle_source/${sourceId}/${action}`;
+                function toggleCalendarSource(sourceId, action) {
+                    // FIXED: Use the correct URL format that matches the route in calendar.py
+                    window.location.href = '{{ url_for("calendar.toggle_calendar_source", source_id=0, action="placeholder") }}'.replace('0', sourceId).replace('placeholder', action);
                 }
                 </script>
             {% else %}

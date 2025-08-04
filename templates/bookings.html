@@ -463,15 +463,21 @@
 
     {% if current_user.has_permission('can_manage_bookings') %}
     <a href="{{ url_for('bookings.add_booking') }}" class="add-btn">+ Add New Booking</a>
-    <a href="{{ url_for('calendar.import_ics') }}" class="add-btn" style="background-color: #28a745; margin-top: 10px;">
-        <i class="calendar-icon"></i> Import Calendar (ICS)
-    </a>
 
     <div style="display: flex; gap: 10px; margin-top: 10px;">
-      <a href="https://www.airbnb.com/hosting/reservations" target="_blank" class="add-btn" style="background-color: #FF5A5F;">
+        <a href="{{ url_for('calendar.import_ics') }}" class="add-btn" style="background-color: #28a745; flex: 1;">
+            <i class="calendar-icon"></i> Import Calendar (ICS)
+        </a>
+        <button id="refresh-all-calendars-btn" class="add-btn" style="background-color: #17a2b8; flex: 1; border: none; cursor: pointer;" onclick="refreshAllCalendars()">
+            <i class="refresh-icon"></i> Refresh All Calendars
+        </button>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <a href="https://www.airbnb.com/hosting/reservations" target="_blank" class="add-btn" style="background-color: #FF5A5F; flex: 1;">
         <i style="margin-right: 5px;"></i> Export from Airbnb
       </a>
-      <button id="airbnb-import-btn" class="add-btn" style="background-color: #FF5A5F;">
+      <button id="airbnb-import-btn" class="add-btn" style="background-color: #FF5A5F; flex: 1;">
         <i style="margin-right: 5px;"></i> Import from Airbnb
       </button>
     </div>
@@ -1976,5 +1982,186 @@
         processButton.addEventListener('click', processCSV);
       }
     });
+</script>
+
+<script>
+// Function to refresh all calendars
+function refreshAllCalendars() {
+    const refreshBtn = document.getElementById('refresh-all-calendars-btn');
+
+    // Show loading state
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></div>Refreshing...';
+    refreshBtn.disabled = true;
+    refreshBtn.style.opacity = '0.7';
+
+    // Create a detailed progress notification
+    const notification = document.createElement('div');
+    notification.className = 'refresh-notification';
+    notification.id = 'refresh-progress-notification';
+    notification.innerHTML = `
+        <div style="background-color: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #17a2b8;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #17a2b8; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px;"></div>
+                <span id="refresh-status">Refreshing all calendar sources...</span>
+            </div>
+            <div id="refresh-progress" style="font-size: 14px; color: #0c5460;">
+                Starting refresh process...
+            </div>
+        </div>
+    `;
+
+    const searchContainer = document.querySelector('.search-container');
+    searchContainer.parentNode.insertBefore(notification, searchContainer);
+
+    // Make AJAX request to refresh all calendars
+    fetch('/api/refresh_all_calendars', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update the notification with results
+        const statusElement = document.getElementById('refresh-status');
+        const progressElement = document.getElementById('refresh-progress');
+
+        if (data.success) {
+            // Success - update notification with green styling
+            notification.innerHTML = `
+                <div style="background-color: #d4edda; color: #155724; padding: 15px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #28a745;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold; margin-bottom: 5px;">✅ Calendar Refresh Complete</div>
+                            <div style="font-size: 14px;">${data.message}</div>
+                            ${data.total_sources > 0 ? `
+                                <div style="font-size: 13px; margin-top: 8px; color: #0f5132;">
+                                    Sources: ${data.successful}/${data.total_sources} successful
+                                    ${data.total_added > 0 ? `• ${data.total_added} new` : ''}
+                                    ${data.total_updated > 0 ? `• ${data.total_updated} updated` : ''}
+                                    ${data.total_cancelled > 0 ? `• ${data.total_cancelled} cancelled` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()"
+                                style="background: none; border: none; color: #155724; cursor: pointer; font-weight: bold; font-size: 18px;">×</button>
+                    </div>
+                </div>
+            `;
+
+            // If there are affected bookings, reload the page to show highlights
+            if (data.affected_booking_ids && data.affected_booking_ids.length > 0) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        } else {
+            // Partial success or failure - update notification with warning/error styling
+            const isPartialSuccess = data.successful > 0;
+            const bgColor = isPartialSuccess ? '#fff3cd' : '#f8d7da';
+            const textColor = isPartialSuccess ? '#856404' : '#721c24';
+            const borderColor = isPartialSuccess ? '#ffc107' : '#dc3545';
+            const icon = isPartialSuccess ? '⚠️' : '❌';
+
+            notification.innerHTML = `
+                <div style="background-color: ${bgColor}; color: ${textColor}; padding: 15px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid ${borderColor};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold; margin-bottom: 5px;">${icon} Calendar Refresh ${isPartialSuccess ? 'Partially Complete' : 'Failed'}</div>
+                            <div style="font-size: 14px;">${data.message}</div>
+                            ${data.total_sources > 0 ? `
+                                <div style="font-size: 13px; margin-top: 8px;">
+                                    Sources: ${data.successful}/${data.total_sources} successful, ${data.failed} failed
+                                    ${data.total_added > 0 ? `• ${data.total_added} new` : ''}
+                                    ${data.total_updated > 0 ? `• ${data.total_updated} updated` : ''}
+                                    ${data.total_cancelled > 0 ? `• ${data.total_cancelled} cancelled` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()"
+                                style="background: none; border: none; color: ${textColor}; cursor: pointer; font-weight: bold; font-size: 18px;">×</button>
+                    </div>
+                </div>
+            `;
+
+            // If there are some successful refreshes, still reload to show any changes
+            if (data.affected_booking_ids && data.affected_booking_ids.length > 0) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing calendars:', error);
+
+        // Error - update notification with error styling
+        notification.innerHTML = `
+            <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #dc3545;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: bold; margin-bottom: 5px;">❌ Calendar Refresh Failed</div>
+                        <div style="font-size: 14px;">Network error occurred while refreshing calendars. Please try again.</div>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()"
+                            style="background: none; border: none; color: #721c24; cursor: pointer; font-weight: bold; font-size: 18px;">×</button>
+                </div>
+            </div>
+        `;
+    })
+    .finally(() => {
+        // Restore button state
+        refreshBtn.innerHTML = originalText;
+        refreshBtn.disabled = false;
+        refreshBtn.style.opacity = '1';
+    });
+}
+
+// Add enhanced styles for the refresh functionality
+const enhancedRefreshStyles = `
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .refresh-notification {
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .add-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    /* Enhance the refresh button appearance */
+    #refresh-all-calendars-btn:hover:not(:disabled) {
+        background-color: #138496 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+    }
+
+    #refresh-all-calendars-btn:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(23, 162, 184, 0.3);
+    }
+`;
+
+// Add the enhanced styles to the document
+const enhancedStyleSheet = document.createElement('style');
+enhancedStyleSheet.textContent = enhancedRefreshStyles;
+document.head.appendChild(enhancedStyleSheet);
 </script>
 {% endblock %}

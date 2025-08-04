@@ -181,7 +181,7 @@ def import_ics():
     # Get existing calendar sources for accessible units only
     calendar_sources = {}
     for unit in units:
-        sources = CalendarSource.query.filter_by(unit_id=unit.id, is_active=True).all()
+        sources = CalendarSource.query.filter_by(unit_id=unit.id).all()
         if sources:
             calendar_sources[unit.id] = sources
 
@@ -637,7 +637,7 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
             price=0,  # Default value - can be updated manually
             booking_source=source,
             payment_status="Paid",  # Assume paid for imported bookings
-            notes=f"Auto-imported from {source}" + (f" ({source_identifier})" if source_identifier else ""),
+            notes="",
             company_id=unit.company_id,
             user_id=user_id_to_use,
             confirmation_code=confirmation_code,
@@ -1506,7 +1506,7 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
             price=0,  # Default value - can be updated manually
             booking_source=source,
             payment_status="Paid",  # Assume paid for imported bookings
-            notes=f"Auto-imported from {source}" + (f" ({source_identifier})" if source_identifier else ""),
+            notes="",
             company_id=unit.company_id,
             user_id=user_id,  # Use the passed user_id instead of current_user.id
             confirmation_code=confirmation_code,
@@ -1573,3 +1573,344 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
             return 0, 0, 0, []
 
     return len(affected_units), len(affected_units), bookings_cancelled, affected_booking_ids
+
+
+@calendar_bp.route('/refresh_all_calendars')
+@login_required
+@permission_required('can_manage_bookings')
+def refresh_all_calendars():
+    """Refresh all active calendar sources for the current user's accessible units"""
+
+    # Get accessible units for this user
+    accessible_unit_ids = current_user.get_accessible_unit_ids()
+
+    if not accessible_unit_ids:
+        flash('You do not have access to any units', 'danger')
+        return redirect(url_for('bookings.bookings'))
+
+    # Get all active calendar sources for accessible units that have URLs
+    calendar_sources = CalendarSource.query.filter(
+        CalendarSource.unit_id.in_(accessible_unit_ids),
+        CalendarSource.source_url.isnot(None),
+        CalendarSource.source_url != '',
+        CalendarSource.is_active == True
+    ).all()
+
+    if not calendar_sources:
+        flash('No active calendar sources found to refresh', 'info')
+        return redirect(url_for('bookings.bookings'))
+
+    # Track results
+    total_sources = len(calendar_sources)
+    successful_refreshes = 0
+    failed_refreshes = 0
+    total_bookings_added = 0
+    total_bookings_updated = 0
+    total_bookings_cancelled = 0
+    all_affected_booking_ids = []
+
+    print(f"Starting bulk refresh of {total_sources} calendar sources...")
+
+    for source in calendar_sources:
+        try:
+            print(
+                f"Refreshing calendar: {source.source_identifier or source.source_name} for unit {source.unit.unit_number}")
+
+            # Download the ICS file
+            headers = {
+                'User-Agent': 'PropertyHub Calendar Sync/1.0',
+                'Accept': 'text/calendar,application/calendar,text/plain,*/*'
+            }
+
+            response = requests.get(
+                source.source_url,
+                timeout=30,
+                headers=headers,
+                allow_redirects=True
+            )
+
+            if response.status_code == 200:
+                calendar_data = response.text
+
+                # Process the calendar using the existing function
+                units_added, units_updated, bookings_cancelled, affected_booking_ids = process_ics_calendar(
+                    calendar_data,
+                    source.unit_id,
+                    source.source_name,
+                    source.source_identifier or source.source_name
+                )
+
+                # Update the last_updated timestamp
+                source.last_updated = datetime.utcnow()
+
+                # Track totals
+                total_bookings_added += units_added
+                total_bookings_updated += units_updated
+                total_bookings_cancelled += bookings_cancelled
+                all_affected_booking_ids.extend(affected_booking_ids)
+
+                successful_refreshes += 1
+                print(f"✓ Successfully refreshed {source.source_identifier or source.source_name}")
+
+            else:
+                print(f"✗ HTTP {response.status_code} for {source.source_identifier or source.source_name}")
+                failed_refreshes += 1
+
+        except requests.exceptions.Timeout:
+            print(f"✗ Timeout refreshing {source.source_identifier or source.source_name}")
+            failed_refreshes += 1
+
+        except Exception as e:
+            print(f"✗ Error refreshing {source.source_identifier or source.source_name}: {str(e)}")
+            failed_refreshes += 1
+
+    # Commit all changes
+    try:
+        db.session.commit()
+        print(f"✓ Successfully committed all calendar refresh changes")
+    except Exception as e:
+        print(f"✗ Error committing changes: {str(e)}")
+        db.session.rollback()
+
+    # Build success message
+    message_parts = []
+    if total_bookings_added > 0:
+        message_parts.append(f"{total_bookings_added} new booking{'s' if total_bookings_added > 1 else ''}")
+    if total_bookings_updated > 0:
+        message_parts.append(f"{total_bookings_updated} updated booking{'s' if total_bookings_updated > 1 else ''}")
+    if total_bookings_cancelled > 0:
+        message_parts.append(
+            f"{total_bookings_cancelled} cancelled booking{'s' if total_bookings_cancelled > 1 else ''}")
+
+    # Create final message
+    if successful_refreshes > 0 and failed_refreshes == 0:
+        if message_parts:
+            flash(f"Successfully refreshed all {successful_refreshes} calendar sources: {', '.join(message_parts)}",
+                  'success')
+        else:
+            flash(f"Successfully refreshed all {successful_refreshes} calendar sources: No changes detected", 'info')
+    elif successful_refreshes > 0 and failed_refreshes > 0:
+        base_message = f"Refreshed {successful_refreshes} of {total_sources} calendar sources"
+        if message_parts:
+            base_message += f": {', '.join(message_parts)}"
+        base_message += f". {failed_refreshes} source{'s' if failed_refreshes > 1 else ''} failed to refresh."
+        flash(base_message, 'warning')
+    else:
+        flash(f"Failed to refresh all {total_sources} calendar sources. Please try again or check individual sources.",
+              'danger')
+
+    # Store affected booking IDs in session for highlighting
+    if all_affected_booking_ids:
+        # Remove duplicates while preserving order
+        unique_ids = []
+        seen = set()
+        for booking_id in all_affected_booking_ids:
+            if booking_id not in seen:
+                unique_ids.append(booking_id)
+                seen.add(booking_id)
+
+        session['highlight_booking_ids'] = unique_ids
+        return redirect(url_for('bookings.bookings', highlight_ids=','.join(map(str, unique_ids))))
+
+    return redirect(url_for('bookings.bookings'))
+
+
+# Add this additional API route to calendar.py for AJAX-based refresh
+
+@calendar_bp.route('/api/refresh_all_calendars', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def api_refresh_all_calendars():
+    """API endpoint to refresh all active calendar sources via AJAX"""
+
+    try:
+        # Get accessible units for this user
+        accessible_unit_ids = current_user.get_accessible_unit_ids()
+
+        if not accessible_unit_ids:
+            return jsonify({
+                'success': False,
+                'message': 'You do not have access to any units'
+            }), 403
+
+        # Get all active calendar sources for accessible units that have URLs
+        calendar_sources = CalendarSource.query.filter(
+            CalendarSource.unit_id.in_(accessible_unit_ids),
+            CalendarSource.source_url.isnot(None),
+            CalendarSource.source_url != '',
+            CalendarSource.is_active == True
+        ).all()
+
+        if not calendar_sources:
+            return jsonify({
+                'success': True,
+                'message': 'No active calendar sources found to refresh',
+                'total_sources': 0,
+                'successful': 0,
+                'failed': 0,
+                'results': []
+            })
+
+        # Track results
+        total_sources = len(calendar_sources)
+        successful_refreshes = 0
+        failed_refreshes = 0
+        total_bookings_added = 0
+        total_bookings_updated = 0
+        total_bookings_cancelled = 0
+        all_affected_booking_ids = []
+        detailed_results = []
+
+        print(f"API: Starting bulk refresh of {total_sources} calendar sources...")
+
+        for source in calendar_sources:
+            source_result = {
+                'source_id': source.id,
+                'unit_number': source.unit.unit_number,
+                'source_name': source.source_name,
+                'source_identifier': source.source_identifier or source.source_name,
+                'success': False,
+                'error': None,
+                'added': 0,
+                'updated': 0,
+                'cancelled': 0
+            }
+
+            try:
+                print(
+                    f"API: Refreshing {source.source_identifier or source.source_name} for unit {source.unit.unit_number}")
+
+                # Download the ICS file
+                headers = {
+                    'User-Agent': 'PropertyHub Calendar Sync/1.0',
+                    'Accept': 'text/calendar,application/calendar,text/plain,*/*'
+                }
+
+                response = requests.get(
+                    source.source_url,
+                    timeout=30,
+                    headers=headers,
+                    allow_redirects=True
+                )
+
+                if response.status_code == 200:
+                    calendar_data = response.text
+
+                    # Process the calendar using the existing function
+                    units_added, units_updated, bookings_cancelled, affected_booking_ids = process_ics_calendar(
+                        calendar_data,
+                        source.unit_id,
+                        source.source_name,
+                        source.source_identifier or source.source_name
+                    )
+
+                    # Update the last_updated timestamp
+                    source.last_updated = datetime.utcnow()
+
+                    # Update source result
+                    source_result.update({
+                        'success': True,
+                        'added': units_added,
+                        'updated': units_updated,
+                        'cancelled': bookings_cancelled
+                    })
+
+                    # Track totals
+                    total_bookings_added += units_added
+                    total_bookings_updated += units_updated
+                    total_bookings_cancelled += bookings_cancelled
+                    all_affected_booking_ids.extend(affected_booking_ids)
+
+                    successful_refreshes += 1
+                    print(f"API: ✓ Successfully refreshed {source.source_identifier or source.source_name}")
+
+                else:
+                    error_msg = f"HTTP {response.status_code}: {response.text[:200]}"
+                    source_result['error'] = error_msg
+                    print(f"API: ✗ {error_msg} for {source.source_identifier or source.source_name}")
+                    failed_refreshes += 1
+
+            except requests.exceptions.Timeout:
+                error_msg = "Request timeout (30s)"
+                source_result['error'] = error_msg
+                print(f"API: ✗ Timeout for {source.source_identifier or source.source_name}")
+                failed_refreshes += 1
+
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                source_result['error'] = error_msg
+                print(f"API: ✗ Error for {source.source_identifier or source.source_name}: {error_msg}")
+                failed_refreshes += 1
+
+            detailed_results.append(source_result)
+
+        # Commit all changes
+        try:
+            db.session.commit()
+            print(f"API: ✓ Successfully committed all calendar refresh changes")
+        except Exception as e:
+            print(f"API: ✗ Error committing changes: {str(e)}")
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Database error: {str(e)}'
+            }), 500
+
+        # Build response message
+        message_parts = []
+        if total_bookings_added > 0:
+            message_parts.append(f"{total_bookings_added} new booking{'s' if total_bookings_added > 1 else ''}")
+        if total_bookings_updated > 0:
+            message_parts.append(f"{total_bookings_updated} updated booking{'s' if total_bookings_updated > 1 else ''}")
+        if total_bookings_cancelled > 0:
+            message_parts.append(
+                f"{total_bookings_cancelled} cancelled booking{'s' if total_bookings_cancelled > 1 else ''}")
+
+        # Create final message
+        if successful_refreshes > 0 and failed_refreshes == 0:
+            if message_parts:
+                message = f"Successfully refreshed all {successful_refreshes} calendar sources: {', '.join(message_parts)}"
+            else:
+                message = f"Successfully refreshed all {successful_refreshes} calendar sources: No changes detected"
+        elif successful_refreshes > 0 and failed_refreshes > 0:
+            base_message = f"Refreshed {successful_refreshes} of {total_sources} calendar sources"
+            if message_parts:
+                base_message += f": {', '.join(message_parts)}"
+            base_message += f". {failed_refreshes} source{'s' if failed_refreshes > 1 else ''} failed."
+            message = base_message
+        else:
+            message = f"Failed to refresh all {total_sources} calendar sources. Please check individual sources."
+
+        # Store affected booking IDs in session for highlighting
+        if all_affected_booking_ids:
+            # Remove duplicates while preserving order
+            unique_ids = []
+            seen = set()
+            for booking_id in all_affected_booking_ids:
+                if booking_id not in seen:
+                    unique_ids.append(booking_id)
+                    seen.add(booking_id)
+
+            session['highlight_booking_ids'] = unique_ids
+
+        return jsonify({
+            'success': failed_refreshes == 0,
+            'message': message,
+            'total_sources': total_sources,
+            'successful': successful_refreshes,
+            'failed': failed_refreshes,
+            'total_added': total_bookings_added,
+            'total_updated': total_bookings_updated,
+            'total_cancelled': total_bookings_cancelled,
+            'affected_booking_ids': all_affected_booking_ids,
+            'results': detailed_results
+        })
+
+    except Exception as e:
+        print(f"API: Critical error in refresh_all_calendars: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Unexpected error: {str(e)}'
+        }), 500
