@@ -7,13 +7,13 @@ from flask_apscheduler import APScheduler
 import os
 import pytz
 from datetime import datetime, timedelta
-
 from models import db, User, Role, Company, HolidayType
 from config import config
 from routes.calendar import process_ics_calendar
 import requests
 from models import CalendarSource
-
+import fcntl
+import tempfile
 
 # Initialize extensions
 bcrypt = Bcrypt()
@@ -463,18 +463,92 @@ def create_holiday_types():
 
 # FIXED: Create a wrapper function that runs with application context
 
+# Create a lock file path
+SYNC_LOCK_FILE = os.path.join(tempfile.gettempdir(), 'calendar_sync.lock')
+
+
 def sync_all_calendars_with_context():
-    """Wrapper function to run sync_all_calendars with application context"""
+    """Wrapper function to run sync_all_calendars with application context and locking"""
+
+    # Try to acquire exclusive lock
     try:
+        lock_fd = open(SYNC_LOCK_FILE, 'w')
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
         print(f"=== SCHEDULED SYNC STARTING at {datetime.now()} ===")
-        print(f"Current working directory: {os.getcwd()}")
-        print(f"Flask app: {app}")
-        print(f"App context: {app.app_context()}")
+        print(f"Lock acquired successfully")
+
+        try:
+            print(f"Current working directory: {os.getcwd()}")
+            print(f"Flask app: {app}")
+            print(f"App context: {app.app_context()}")
+
+            with app.app_context():
+                print("✓ App context established successfully")
+
+                # Test database connection
+                try:
+                    from models import CalendarSource
+                    source_count = CalendarSource.query.count()
+                    print(f"✓ Database connection OK - found {source_count} calendar sources")
+                except Exception as db_error:
+                    print(f"✗ Database connection error: {db_error}")
+                    return
+
+                try:
+                    print(f"✓ About to call sync_all_calendars()")
+                    result = sync_all_calendars()
+                    print(f"✓ sync_all_calendars() completed with result: {result}")
+                except Exception as sync_error:
+                    print(f"✗ Error in sync_all_calendars(): {sync_error}")
+                    import traceback
+                    traceback.print_exc()
+
+        finally:
+            # Always release the lock
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+            lock_fd.close()
+            print(f"Lock released successfully")
+
+    except IOError:
+        print(f"=== SYNC SKIPPED at {datetime.now()} - Another sync job is already running ===")
+        return {"success": False, "message": "Another sync job is already running"}
+    except Exception as e:
+        print(f"✗ CRITICAL ERROR in sync_all_calendars_with_context: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+    finally:
+        print(f"=== SCHEDULED SYNC ENDED at {datetime.now()} ===")
+
+
+# Alternative for Windows systems (if fcntl doesn't work):
+def sync_all_calendars_with_context_windows():
+    """Alternative implementation for Windows systems"""
+    import time
+
+    lock_file = SYNC_LOCK_FILE
+
+    # Check if lock file exists and is recent (less than 30 minutes old)
+    if os.path.exists(lock_file):
+        file_age = time.time() - os.path.getmtime(lock_file)
+        if file_age < 1800:  # 30 minutes
+            print(f"=== SYNC SKIPPED at {datetime.now()} - Lock file exists (age: {file_age:.0f}s) ===")
+            return {"success": False, "message": "Another sync job is already running"}
+        else:
+            # Remove stale lock file
+            os.remove(lock_file)
+
+    try:
+        # Create lock file
+        with open(lock_file, 'w') as f:
+            f.write(f"{datetime.now().isoformat()}\n{os.getpid()}")
+
+        print(f"=== SCHEDULED SYNC STARTING at {datetime.now()} ===")
 
         with app.app_context():
             print("✓ App context established successfully")
 
-            # Test database connection
             try:
                 from models import CalendarSource
                 source_count = CalendarSource.query.count()
@@ -483,21 +557,21 @@ def sync_all_calendars_with_context():
                 print(f"✗ Database connection error: {db_error}")
                 return
 
-            # Test current_user context (this might be the issue)
             try:
                 print(f"✓ About to call sync_all_calendars()")
                 result = sync_all_calendars()
                 print(f"✓ sync_all_calendars() completed with result: {result}")
+                return result
             except Exception as sync_error:
                 print(f"✗ Error in sync_all_calendars(): {sync_error}")
                 import traceback
                 traceback.print_exc()
+                return {"success": False, "error": str(sync_error)}
 
-    except Exception as e:
-        print(f"✗ CRITICAL ERROR in sync_all_calendars_with_context: {e}")
-        import traceback
-        traceback.print_exc()
     finally:
+        # Remove lock file
+        if os.path.exists(lock_file):
+            os.remove(lock_file)
         print(f"=== SCHEDULED SYNC ENDED at {datetime.now()} ===")
 
 

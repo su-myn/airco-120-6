@@ -471,9 +471,15 @@ class BookingForm(db.Model):
     author = db.relationship('User', backref='bookings')
     date_added = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+    __table_args__ = (
+        # Prevent duplicate bookings with same confirmation code in the same company
+        db.UniqueConstraint('confirmation_code', 'company_id',
+                          name='_booking_confirmation_company_uc'),
+        # Note: Only applies when confirmation_code is not NULL/empty
+    )
+
     def __repr__(self):
         return f"Booking('{self.guest_name}', '{self.unit.unit_number}', Check-in: '{self.check_in_date}')"
-
 
 class CalendarSource(db.Model):
     id = db.Column(db.Integer, primary_key=True)

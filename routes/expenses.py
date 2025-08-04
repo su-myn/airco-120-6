@@ -180,7 +180,6 @@ def save_expenses():
     return jsonify({'success': True, 'message': 'Expenses data saved successfully'})
 
 
-# Replace the existing get_monthly_revenue() function with this updated version:
 @expenses_bp.route('/api/bookings/monthly_revenue')
 @login_required
 def get_monthly_revenue():
@@ -208,17 +207,12 @@ def get_monthly_revenue():
         end_date = datetime(year, month + 1, 1).date()
 
     # Query bookings for the month, filtered by accessible units
+    # CHANGED: Simple filter by check-in date only (revenue recognition on check-in date)
     bookings = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(accessible_unit_ids),
-        (
-            # Check-in during the month
-                (BookingForm.check_in_date >= start_date) & (BookingForm.check_in_date < end_date) |
-                # Check-out during the month
-                (BookingForm.check_out_date > start_date) & (BookingForm.check_out_date <= end_date) |
-                # Spanning the entire month
-                (BookingForm.check_in_date <= start_date) & (BookingForm.check_out_date >= end_date)
-        )
+        BookingForm.check_in_date >= start_date,
+        BookingForm.check_in_date < end_date
     ).all()
 
     # Calculate revenue per accessible unit
@@ -228,28 +222,16 @@ def get_monthly_revenue():
         if unit_id not in revenues:
             revenues[unit_id] = 0
 
-        # Calculate the portion of booking revenue to attribute to this month
-        total_nights = (booking.check_out_date - booking.check_in_date).days
-        if total_nights <= 0:
-            continue
-
-        # Determine the nights that fall within the selected month
-        night_start = max(booking.check_in_date, start_date)
-        night_end = min(booking.check_out_date, end_date)
-        nights_in_month = (night_end - night_start).days
-
-        # Calculate prorated revenue for the month
-        if total_nights > 0 and booking.price:
+        # CHANGED: Use full booking price (revenue recognition on check-in date)
+        if booking.price:
             try:
-                daily_rate = float(booking.price) / total_nights
-                month_revenue = daily_rate * nights_in_month
-                revenues[unit_id] += month_revenue
+                booking_price = float(booking.price)
+                revenues[unit_id] += booking_price
             except (ValueError, TypeError):
                 # Handle any conversion errors
                 pass
 
     return jsonify({'revenues': revenues})
-
 
 # Replace the existing get_monthly_issue_costs() function with this updated version:
 @expenses_bp.route('/api/issues/monthly_costs')
