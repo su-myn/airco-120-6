@@ -412,6 +412,7 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
     """Process ICS calendar data and handle bookings based on confirmation codes - FIXED VERSION"""
     from icalendar import Calendar
     import re
+    from datetime import date
 
     # Parse the ICS data
     try:
@@ -431,6 +432,9 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
     bookings_cancelled = 0
     affected_booking_ids = []
     affected_units = set()
+
+    # Get today's date for filtering
+    today = date.today()
 
     # Collect all confirmation codes and their details from the ICS calendar
     current_bookings = {}
@@ -473,6 +477,11 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
             if isinstance(end_date, datetime):
                 end_date = end_date.date()
 
+            # FILTER: Skip bookings with check-out date in the past (before today)
+            if end_date < today:
+                print(f"DEBUG: Skipping past booking {confirmation_code} with check-out date {end_date}")
+                continue
+
             # Calculate number of nights
             nights = (end_date - start_date).days
 
@@ -490,13 +499,13 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
             }
 
     print(
-        f"DEBUG: Found {len(current_bookings)} bookings in ICS with confirmation codes: {list(current_bookings.keys())}")
+        f"DEBUG: Found {len(current_bookings)} valid future bookings in ICS with confirmation codes: {list(current_bookings.keys())}")
 
     # FIXED: Get existing bookings more intelligently - focus on confirmation codes
     current_codes = set(current_bookings.keys())
 
     if not current_codes:
-        print("DEBUG: No valid confirmation codes found in ICS, exiting")
+        print("DEBUG: No valid future confirmation codes found in ICS, exiting")
         return 0, 0, 0, []
 
     # Query for existing bookings with ANY of the confirmation codes from this ICS
@@ -1331,6 +1340,7 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
     """Process ICS calendar data for scheduled jobs (without request context)"""
     from icalendar import Calendar
     import re
+    from datetime import date
 
     # Parse the ICS data
     try:
@@ -1352,6 +1362,9 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
 
     # Keep track of units affected for reporting
     affected_units = set()
+
+    # Get today's date for filtering
+    today = date.today()
 
     # Collect all confirmation codes and their details from the ICS calendar
     current_bookings = {}
@@ -1393,6 +1406,11 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
                 start_date = start_date.date()
             if isinstance(end_date, datetime):
                 end_date = end_date.date()
+
+            # FILTER: Skip bookings with check-out date in the past (before today)
+            if end_date < today:
+                print(f"DEBUG: Skipping past booking {confirmation_code} with check-out date {end_date}")
+                continue
 
             # Calculate number of nights
             nights = (end_date - start_date).days

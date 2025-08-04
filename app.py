@@ -763,18 +763,6 @@ def init_scheduler(app):
         replace_existing=True
     )
 
-    # TESTING 9:55 PM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=21,
-        minute=55,
-        timezone=malaysia_tz,
-        id='sync_calendars_955pm',
-        name='Calendar Sync - 9:55 PM',
-        replace_existing=True
-    )
-
     # 9:00 AM (Noon) Malaysia time
     scheduler.add_job(
         func=sync_all_calendars_with_context,  # Use the wrapper function
@@ -784,42 +772,6 @@ def init_scheduler(app):
         timezone=malaysia_tz,
         id='sync_calendars_9am',
         name='Calendar Sync - 9:00 AM',
-        replace_existing=True
-    )
-
-    # 10:30 AM  Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=10,
-        minute=30,
-        timezone=malaysia_tz,
-        id='sync_calendars_1030am',
-        name='Calendar Sync - 10:30 AM',
-        replace_existing=True
-    )
-
-    # 10:40 AM  Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=10,
-        minute=40,
-        timezone=malaysia_tz,
-        id='sync_calendars_1040am',
-        name='Calendar Sync - 10:40 AM',
-        replace_existing=True
-    )
-
-    # 10:45 AM  Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=10,
-        minute=45,
-        timezone=malaysia_tz,
-        id='sync_calendars_1045am',
-        name='Calendar Sync - 10:45 AM',
         replace_existing=True
     )
 
@@ -844,6 +796,42 @@ def init_scheduler(app):
         timezone=malaysia_tz,
         id='sync_calendars_300pm',
         name='Calendar Sync - 3:00 PM',
+        replace_existing=True
+    )
+
+    # 3:03 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=15,
+        minute=3,
+        timezone=malaysia_tz,
+        id='sync_calendars_303pm',
+        name='Calendar Sync - 3:03 PM',
+        replace_existing=True
+    )
+
+    # 3:06 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=15,
+        minute=6,
+        timezone=malaysia_tz,
+        id='sync_calendars_306pm',
+        name='Calendar Sync - 3:06 PM',
+        replace_existing=True
+    )
+
+    # 3:09 PM Malaysia time
+    scheduler.add_job(
+        func=sync_all_calendars_with_context,  # Use the wrapper function
+        trigger='cron',
+        hour=15,
+        minute=9,
+        timezone=malaysia_tz,
+        id='sync_calendars_309pm',
+        name='Calendar Sync - 3:09 PM',
         replace_existing=True
     )
 
