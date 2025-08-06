@@ -1771,7 +1771,7 @@
       const notification = document.createElement('div');
       notification.className = 'import-notification';
       notification.innerHTML = `
-        <div style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+        <div style="background-color: #f8f9fa; color: #495057; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
           <span>Processing ${bookings.length} bookings from Airbnb CSV...</span>
         </div>
       `;
@@ -2163,5 +2163,52 @@ const enhancedRefreshStyles = `
 const enhancedStyleSheet = document.createElement('style');
 enhancedStyleSheet.textContent = enhancedRefreshStyles;
 document.head.appendChild(enhancedStyleSheet);
+
+// Handle occupancy date filter from URL parameters
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const dateFilter = urlParams.get('date');
+    const isOccupancy = urlParams.get('occupancy');
+
+    if (dateFilter && isOccupancy) {
+        // Filter bookings for the specific date (check-in <= date < check-out)
+        const targetDate = new Date(dateFilter);
+        const rows = document.querySelectorAll('#booking-table tbody tr');
+
+        rows.forEach(row => {
+            if (row.id.includes('update-form')) return;
+
+            const cells = row.getElementsByTagName('td');
+            if (cells.length === 0) return;
+
+            const checkinCell = cells[4]; // Check-in date column
+            const checkoutCell = cells[5]; // Check-out date column
+
+            const checkinDate = new Date(checkinCell.textContent);
+            const checkoutDate = new Date(checkoutCell.textContent);
+
+            // Show only bookings where check-in <= targetDate < check-out
+            if (checkinDate <= targetDate && targetDate < checkoutDate) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        // Add filter message
+        const searchContainer = document.querySelector('.search-container');
+        const filterMessage = document.createElement('div');
+        filterMessage.style.cssText = 'background-color: #f8f9fa; padding: 10px 15px; margin-bottom: 15px; border-radius: 5px; border-left: 4px solid #4169E1;';
+        filterMessage.innerHTML = `
+            <p style="margin: 0; display: flex; justify-content: space-between; align-items: center;">
+                <span>Showing bookings for ${targetDate.toLocaleDateString()}</span>
+                <a href="/bookings" style="color: #4169E1; text-decoration: none;">
+                    <span style="font-size: 0.9rem;">Clear Filter</span>
+                </a>
+            </p>
+        `;
+        searchContainer.parentNode.insertBefore(filterMessage, searchContainer);
+    }
+});
 </script>
 {% endblock %}

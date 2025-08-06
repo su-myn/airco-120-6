@@ -380,6 +380,19 @@
 
                         occupancyElement.innerHTML = `${count}/${data.total_units}`;
                         occupancyElement.classList.add(occupancyClass);
+
+                        // Make occupancy clickable if there are bookings
+                        if (count > 0) {
+                            occupancyElement.style.cursor = 'pointer';
+                            occupancyElement.addEventListener('click', function() {
+                                // Create the date for filtering (YYYY-MM-DD format)
+                                const clickedDate = new Date(year, month - 1, day);
+                                const dateStr = clickedDate.toISOString().split('T')[0];
+
+                                // Navigate to bookings page with date filter
+                                window.location.href = `/bookings?date=${dateStr}&occupancy=true`;
+                            });
+                        }
                     }
                 }
 

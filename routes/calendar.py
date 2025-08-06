@@ -52,6 +52,7 @@ def get_calendar_bookings():
             'id': booking.id,
             'unit_id': booking.unit_id,
             'unit_number': booking.unit.unit_number,
+            'building': booking.unit.building or '',  # Include building from Unit model
             'guest_name': booking.guest_name,
             'check_in_date': booking.check_in_date.isoformat(),
             'check_out_date': booking.check_out_date.isoformat(),
@@ -407,7 +408,6 @@ def import_airbnb_csv():
     })
 
 # Helper function to process ICS calendars
-
 def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None, user=None):
     """Process ICS calendar data and handle bookings based on confirmation codes - FIXED VERSION"""
     from icalendar import Calendar
@@ -498,8 +498,7 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
                 'source_identifier': source_identifier
             }
 
-    print(
-        f"DEBUG: Found {len(current_bookings)} valid future bookings in ICS with confirmation codes: {list(current_bookings.keys())}")
+    print(f"DEBUG: Found {len(current_bookings)} valid future bookings in ICS with confirmation codes: {list(current_bookings.keys())}")
 
     # FIXED: Get existing bookings more intelligently - focus on confirmation codes
     current_codes = set(current_bookings.keys())
@@ -509,7 +508,6 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
         return 0, 0, 0, []
 
     # Query for existing bookings with ANY of the confirmation codes from this ICS
-    # This is more precise than filtering by source/unit alone
     existing_bookings_query = BookingForm.query.filter(
         BookingForm.unit_id == unit_id,
         BookingForm.confirmation_code.in_(list(current_codes))
@@ -598,8 +596,7 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
         ).first()
 
         if duplicate_check:
-            print(
-                f"DEBUG: Skipping duplicate booking {confirmation_code} - already exists with ID {duplicate_check.id}")
+            print(f"DEBUG: Skipping duplicate booking {confirmation_code} - already exists with ID {duplicate_check.id}")
             continue
 
         print(f"DEBUG: Adding new booking {confirmation_code}")
@@ -652,15 +649,20 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
         affected_booking_ids.append(new_booking.id)
         affected_units.add(unit.unit_number)
 
-    # FIXED: Handle cancelled bookings more carefully
-    # Only cancel bookings that were imported by THIS specific source
+    # CRITICAL FIX: Handle cancelled bookings more carefully - DON'T CANCEL PAST BOOKINGS
     for booking in all_existing_bookings:
         if not booking.confirmation_code:
             continue
 
         # If this booking's confirmation code is not in current ICS
         if booking.confirmation_code not in current_codes:
-            # Only cancel if this booking was imported from this specific source
+            # CRITICAL FIX: Never cancel bookings that have already checked out (past bookings)
+            # Past bookings are historical data and should be preserved even if no longer in ICS
+            if booking.check_out_date < datetime.utcnow().date():
+                print(f"DEBUG: Skipping cancellation of past booking {booking.confirmation_code} - already checked out on {booking.check_out_date}")
+                continue
+
+            # Only cancel if this booking was imported by THIS specific source
             should_cancel = False
 
             if source_identifier:
@@ -677,8 +679,9 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
 
                 should_cancel = (other_sources <= 1)
 
+            # Additional check: Only cancel future bookings (double-check)
             if should_cancel and booking.check_out_date >= datetime.utcnow().date() and not booking.is_cancelled:
-                print(f"DEBUG: Marking booking {booking.confirmation_code} as cancelled")
+                print(f"DEBUG: Marking future booking {booking.confirmation_code} as cancelled")
                 booking.is_cancelled = True
 
                 # Add note about cancellation
@@ -699,8 +702,253 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
     if bookings_added > 0 or bookings_updated > 0 or bookings_cancelled > 0:
         try:
             db.session.commit()
-            print(
-                f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
+            print(f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
+        except Exception as e:
+            print(f"ERROR: Failed to commit changes: {str(e)}")
+            db.session.rollback()
+            return 0, 0, 0, []
+
+    return len(affected_units), len(affected_units), bookings_cancelled, affected_booking_ids
+
+
+def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identifier=None, user_id=None):
+    """Process ICS calendar data for scheduled jobs (without request context) - FIXED VERSION"""
+    from icalendar import Calendar
+    import re
+    from datetime import date
+
+    # Parse the ICS data
+    try:
+        cal = Calendar.from_ical(calendar_data)
+    except Exception as e:
+        print(f"Error parsing calendar: {str(e)}")
+        return 0, 0, 0, []
+
+    # FIXED: Validate that the unit exists
+    unit = Unit.query.get(unit_id)
+    if not unit:
+        print(f"Error: Unit with ID {unit_id} does not exist")
+        return 0, 0, 0, []
+
+    bookings_added = 0
+    bookings_updated = 0
+    bookings_cancelled = 0
+    affected_booking_ids = []
+
+    # Keep track of units affected for reporting
+    affected_units = set()
+
+    # Get today's date for filtering
+    today = date.today()
+
+    # Collect all confirmation codes and their details from the ICS calendar
+    current_bookings = {}
+
+    for component in cal.walk():
+        if component.name == "VEVENT":
+            # Skip blocked dates or unavailable periods
+            summary = str(component.get('summary', 'Booking'))
+            if "blocked" in summary.lower() or "unavailable" in summary.lower():
+                continue
+
+            description = str(component.get('description', ''))
+
+            # Extract confirmation code from the description field
+            confirmation_code = ""
+
+            # For Airbnb: Extract from URL like https://www.airbnb.com/hosting/reservations/details/HMN8ZKWAQE
+            if source == "Airbnb":
+                url_match = re.search(r'reservations/details/([A-Z0-9]+)', description)
+                if url_match:
+                    confirmation_code = url_match.group(1)
+
+            # For other platforms - adapt as needed
+            elif source == "Booking.com":
+                booking_match = re.search(r'Booking ID:\s*(\d+)', description)
+                if booking_match:
+                    confirmation_code = booking_match.group(1)
+
+            # If no valid confirmation code found, skip this entry
+            if not confirmation_code:
+                continue
+
+            # Get start and end dates
+            start_date = component.get('dtstart').dt
+            end_date = component.get('dtend').dt
+
+            # Convert datetime objects to date objects if needed
+            if isinstance(start_date, datetime):
+                start_date = start_date.date()
+            if isinstance(end_date, datetime):
+                end_date = end_date.date()
+
+            # FILTER: Skip bookings with check-out date in the past (before today)
+            if end_date < today:
+                print(f"DEBUG: Skipping past booking {confirmation_code} with check-out date {end_date}")
+                continue
+
+            # Calculate number of nights
+            nights = (end_date - start_date).days
+
+            # Extract guest name from summary or description
+            guest_name = extract_guest_name(summary, description)
+
+            # Store booking details
+            current_bookings[confirmation_code] = {
+                'check_in_date': start_date,
+                'check_out_date': end_date,
+                'number_of_nights': nights,
+                'guest_name': guest_name,
+                'description': description,
+                'source_identifier': source_identifier
+            }
+
+    # Get existing bookings for this source
+    if source_identifier:
+        existing_bookings = BookingForm.query.filter(
+            BookingForm.unit_id == unit_id,
+            BookingForm.booking_source == source,
+            BookingForm.import_source == source_identifier
+        ).all()
+    else:
+        existing_bookings = BookingForm.query.filter(
+            BookingForm.unit_id == unit_id,
+            BookingForm.booking_source == source
+        ).all()
+
+    # Create sets for easier comparison
+    current_codes = set(current_bookings.keys())
+    existing_codes = set()
+    existing_booking_map = {}
+
+    # Build map of existing bookings by confirmation code
+    for booking in existing_bookings:
+        if booking.confirmation_code:
+            existing_codes.add(booking.confirmation_code)
+            existing_booking_map[booking.confirmation_code] = booking
+
+    print(f"DEBUG: Found {len(current_codes)} bookings in ICS")
+    print(f"DEBUG: Found {len(existing_codes)} existing bookings in database")
+
+    # Process updates for existing bookings
+    for confirmation_code in existing_codes.intersection(current_codes):
+        booking = existing_booking_map[confirmation_code]
+        current_data = current_bookings[confirmation_code]
+
+        needs_update = (
+                booking.check_in_date != current_data['check_in_date'] or
+                booking.check_out_date != current_data['check_out_date'] or
+                booking.number_of_nights != current_data['number_of_nights']
+        )
+
+        if needs_update:
+            print(f"DEBUG: Updating booking {confirmation_code}")
+            # Update booking details
+            booking.check_in_date = current_data['check_in_date']
+            booking.check_out_date = current_data['check_out_date']
+            booking.number_of_nights = current_data['number_of_nights']
+
+            # Update guest name only if it's better than what we have
+            if (not booking.guest_name or
+                booking.guest_name.startswith("Guest from") or
+                booking.guest_name == f"Guest from {source}") and current_data['guest_name']:
+                booking.guest_name = current_data['guest_name']
+
+            # Update import source tracking
+            booking.import_source = source_identifier or source
+            booking.import_timestamp = datetime.utcnow()
+
+            bookings_updated += 1
+            affected_booking_ids.append(booking.id)
+            affected_units.add(unit.unit_number)
+
+    # Add new bookings
+    for confirmation_code in current_codes - existing_codes:
+        details = current_bookings[confirmation_code]
+
+        print(f"DEBUG: Adding new booking {confirmation_code}")
+
+        # Create new booking
+        new_booking = BookingForm(
+            guest_name=details['guest_name'] or f"Guest from {source}",
+            contact_number="",  # ICS doesn't usually have this
+            check_in_date=details['check_in_date'],
+            check_out_date=details['check_out_date'],
+            property_name=unit.building or "Property",
+            unit_id=unit_id,
+            number_of_nights=details['number_of_nights'],
+            number_of_guests=2,  # Default value
+            price=0,  # Default value - can be updated manually
+            booking_source=source,
+            payment_status="Paid",  # Assume paid for imported bookings
+            notes="",
+            company_id=unit.company_id,
+            user_id=user_id,  # Use the passed user_id instead of current_user.id
+            confirmation_code=confirmation_code,
+            # Track import source
+            import_source=source_identifier or source,
+            import_timestamp=datetime.utcnow()
+        )
+
+        db.session.add(new_booking)
+        db.session.flush()  # Get the ID
+        bookings_added += 1
+        affected_booking_ids.append(new_booking.id)
+        affected_units.add(unit.unit_number)
+
+    # CRITICAL FIX: Handle cancelled bookings more carefully - DON'T CANCEL PAST BOOKINGS
+    for confirmation_code in existing_codes - current_codes:
+        booking = existing_booking_map[confirmation_code]
+
+        # CRITICAL FIX: Never cancel bookings that have already checked out (past bookings)
+        # Past bookings are historical data and should be preserved even if no longer in ICS
+        if booking.check_out_date < datetime.utcnow().date():
+            print(f"DEBUG: Skipping cancellation of past booking {confirmation_code} - already checked out on {booking.check_out_date}")
+            continue
+
+        # Only cancel if this booking was imported from this specific source
+        should_cancel = False
+
+        if source_identifier:
+            should_cancel = (booking.import_source == source_identifier)
+        else:
+            other_sources = CalendarSource.query.filter(
+                CalendarSource.unit_id == unit_id,
+                CalendarSource.source_name == source,
+                CalendarSource.is_active == True,
+                CalendarSource.id != (CalendarSource.query.filter_by(
+                    unit_id=unit_id,
+                    source_name=source,
+                    source_identifier=source_identifier
+                ).first().id if source_identifier else None)
+            ).count()
+
+            should_cancel = (other_sources == 0)
+
+        # Additional check: Only cancel future bookings (double-check)
+        if should_cancel and booking.check_out_date >= datetime.utcnow().date():
+            print(f"DEBUG: Marking future booking {confirmation_code} as cancelled")
+            booking.is_cancelled = True
+
+            # Add note about cancellation
+            cancel_note = f"Auto-cancelled: No longer in {source}"
+            if source_identifier:
+                cancel_note += f" ({source_identifier})"
+            cancel_note += f" as of {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+
+            if booking.notes:
+                booking.notes = f"{booking.notes}; {cancel_note}"
+            else:
+                booking.notes = cancel_note
+
+            bookings_cancelled += 1
+            affected_booking_ids.append(booking.id)
+
+    # Commit all changes
+    if bookings_added > 0 or bookings_updated > 0 or bookings_cancelled > 0:
+        try:
+            db.session.commit()
+            print(f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
         except Exception as e:
             print(f"ERROR: Failed to commit changes: {str(e)}")
             db.session.rollback()
@@ -1334,245 +1582,6 @@ def debug_sync_logs():
         {% endfor %}
     </table>
     """, sources=sources, now=datetime.now())
-
-
-def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identifier=None, user_id=None):
-    """Process ICS calendar data for scheduled jobs (without request context)"""
-    from icalendar import Calendar
-    import re
-    from datetime import date
-
-    # Parse the ICS data
-    try:
-        cal = Calendar.from_ical(calendar_data)
-    except Exception as e:
-        print(f"Error parsing calendar: {str(e)}")
-        return 0, 0, 0, []
-
-    # FIXED: Validate that the unit exists
-    unit = Unit.query.get(unit_id)
-    if not unit:
-        print(f"Error: Unit with ID {unit_id} does not exist")
-        return 0, 0, 0, []
-
-    bookings_added = 0
-    bookings_updated = 0
-    bookings_cancelled = 0
-    affected_booking_ids = []
-
-    # Keep track of units affected for reporting
-    affected_units = set()
-
-    # Get today's date for filtering
-    today = date.today()
-
-    # Collect all confirmation codes and their details from the ICS calendar
-    current_bookings = {}
-
-    for component in cal.walk():
-        if component.name == "VEVENT":
-            # Skip blocked dates or unavailable periods
-            summary = str(component.get('summary', 'Booking'))
-            if "blocked" in summary.lower() or "unavailable" in summary.lower():
-                continue
-
-            description = str(component.get('description', ''))
-
-            # Extract confirmation code from the description field
-            confirmation_code = ""
-
-            # For Airbnb: Extract from URL like https://www.airbnb.com/hosting/reservations/details/HMN8ZKWAQE
-            if source == "Airbnb":
-                url_match = re.search(r'reservations/details/([A-Z0-9]+)', description)
-                if url_match:
-                    confirmation_code = url_match.group(1)
-
-            # For other platforms - adapt as needed
-            elif source == "Booking.com":
-                booking_match = re.search(r'Booking ID:\s*(\d+)', description)
-                if booking_match:
-                    confirmation_code = booking_match.group(1)
-
-            # If no valid confirmation code found, skip this entry
-            if not confirmation_code:
-                continue
-
-            # Get start and end dates
-            start_date = component.get('dtstart').dt
-            end_date = component.get('dtend').dt
-
-            # Convert datetime objects to date objects if needed
-            if isinstance(start_date, datetime):
-                start_date = start_date.date()
-            if isinstance(end_date, datetime):
-                end_date = end_date.date()
-
-            # FILTER: Skip bookings with check-out date in the past (before today)
-            if end_date < today:
-                print(f"DEBUG: Skipping past booking {confirmation_code} with check-out date {end_date}")
-                continue
-
-            # Calculate number of nights
-            nights = (end_date - start_date).days
-
-            # Extract guest name from summary or description
-            guest_name = extract_guest_name(summary, description)
-
-            # Store booking details
-            current_bookings[confirmation_code] = {
-                'check_in_date': start_date,
-                'check_out_date': end_date,
-                'number_of_nights': nights,
-                'guest_name': guest_name,
-                'description': description,
-                'source_identifier': source_identifier
-            }
-
-    # Get existing bookings for this source
-    if source_identifier:
-        existing_bookings = BookingForm.query.filter(
-            BookingForm.unit_id == unit_id,
-            BookingForm.booking_source == source,
-            BookingForm.import_source == source_identifier
-        ).all()
-    else:
-        existing_bookings = BookingForm.query.filter(
-            BookingForm.unit_id == unit_id,
-            BookingForm.booking_source == source
-        ).all()
-
-    # Create sets for easier comparison
-    current_codes = set(current_bookings.keys())
-    existing_codes = set()
-    existing_booking_map = {}
-
-    # Build map of existing bookings by confirmation code
-    for booking in existing_bookings:
-        if booking.confirmation_code:
-            existing_codes.add(booking.confirmation_code)
-            existing_booking_map[booking.confirmation_code] = booking
-
-    print(f"DEBUG: Found {len(current_codes)} bookings in ICS")
-    print(f"DEBUG: Found {len(existing_codes)} existing bookings in database")
-
-    # Process updates for existing bookings
-    for confirmation_code in existing_codes.intersection(current_codes):
-        booking = existing_booking_map[confirmation_code]
-        current_data = current_bookings[confirmation_code]
-
-        needs_update = (
-                booking.check_in_date != current_data['check_in_date'] or
-                booking.check_out_date != current_data['check_out_date'] or
-                booking.number_of_nights != current_data['number_of_nights']
-        )
-
-        if needs_update:
-            print(f"DEBUG: Updating booking {confirmation_code}")
-            # Update booking details
-            booking.check_in_date = current_data['check_in_date']
-            booking.check_out_date = current_data['check_out_date']
-            booking.number_of_nights = current_data['number_of_nights']
-
-            # Update guest name only if it's better than what we have
-            if (not booking.guest_name or
-                booking.guest_name.startswith("Guest from") or
-                booking.guest_name == f"Guest from {source}") and current_data['guest_name']:
-                booking.guest_name = current_data['guest_name']
-
-            # Update import source tracking
-            booking.import_source = source_identifier or source
-            booking.import_timestamp = datetime.utcnow()
-
-            bookings_updated += 1
-            affected_booking_ids.append(booking.id)
-            affected_units.add(unit.unit_number)
-
-    # Add new bookings
-    for confirmation_code in current_codes - existing_codes:
-        details = current_bookings[confirmation_code]
-
-        print(f"DEBUG: Adding new booking {confirmation_code}")
-
-        # Create new booking
-        new_booking = BookingForm(
-            guest_name=details['guest_name'] or f"Guest from {source}",
-            contact_number="",  # ICS doesn't usually have this
-            check_in_date=details['check_in_date'],
-            check_out_date=details['check_out_date'],
-            property_name=unit.building or "Property",
-            unit_id=unit_id,
-            number_of_nights=details['number_of_nights'],
-            number_of_guests=2,  # Default value
-            price=0,  # Default value - can be updated manually
-            booking_source=source,
-            payment_status="Paid",  # Assume paid for imported bookings
-            notes="",
-            company_id=unit.company_id,
-            user_id=user_id,  # Use the passed user_id instead of current_user.id
-            confirmation_code=confirmation_code,
-            # Track import source
-            import_source=source_identifier or source,
-            import_timestamp=datetime.utcnow()
-        )
-
-        db.session.add(new_booking)
-        db.session.flush()  # Get the ID
-        bookings_added += 1
-        affected_booking_ids.append(new_booking.id)
-        affected_units.add(unit.unit_number)
-
-    # Handle cancelled bookings
-    for confirmation_code in existing_codes - current_codes:
-        booking = existing_booking_map[confirmation_code]
-
-        # Only cancel if this booking was imported from this specific source
-        should_cancel = False
-
-        if source_identifier:
-            should_cancel = (booking.import_source == source_identifier)
-        else:
-            other_sources = CalendarSource.query.filter(
-                CalendarSource.unit_id == unit_id,
-                CalendarSource.source_name == source,
-                CalendarSource.is_active == True,
-                CalendarSource.id != (CalendarSource.query.filter_by(
-                    unit_id=unit_id,
-                    source_name=source,
-                    source_identifier=source_identifier
-                ).first().id if source_identifier else None)
-            ).count()
-
-            should_cancel = (other_sources == 0)
-
-        if should_cancel and booking.check_out_date >= datetime.utcnow().date():
-            print(f"DEBUG: Marking booking {confirmation_code} as cancelled")
-            booking.is_cancelled = True
-
-            # Add note about cancellation
-            cancel_note = f"Auto-cancelled: No longer in {source}"
-            if source_identifier:
-                cancel_note += f" ({source_identifier})"
-            cancel_note += f" as of {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
-
-            if booking.notes:
-                booking.notes = f"{booking.notes}; {cancel_note}"
-            else:
-                booking.notes = cancel_note
-
-            bookings_cancelled += 1
-            affected_booking_ids.append(booking.id)
-
-    # Commit all changes
-    if bookings_added > 0 or bookings_updated > 0 or bookings_cancelled > 0:
-        try:
-            db.session.commit()
-            print(f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
-        except Exception as e:
-            print(f"ERROR: Failed to commit changes: {str(e)}")
-            db.session.rollback()
-            return 0, 0, 0, []
-
-    return len(affected_units), len(affected_units), bookings_cancelled, affected_booking_ids
 
 
 @calendar_bp.route('/refresh_all_calendars')

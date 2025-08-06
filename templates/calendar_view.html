@@ -50,7 +50,7 @@
         padding: 8px;
         border-radius: 4px;
         border: 1px solid #ddd;
-        min-width: 180px;
+        min-width: 140px;
     }
 
     .filter-buttons {
@@ -77,9 +77,13 @@
         color: white;
     }
 
+    /* FIXED: Calendar with proper height constraints */
     #calendar {
-        height: 700px;
+        height: 600px; /* Fixed height */
+        max-height: 70vh; /* Limit to viewport height */
         width: 100%;
+        margin-bottom: 20px;
+        overflow: hidden; /* Prevent overflow */
     }
 
     /* Calendar Event Styling */
@@ -186,43 +190,45 @@
         border-color: #ee4d2d;
     }
 
-    /* Legend */
+    /* FIXED: Legend positioned outside calendar */
     .calendar-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin-top: 20px;
-        padding: 15px;
         background-color: #f8f9fa;
         border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 1;
+    }
+
+    .legend-section-title {
+        font-weight: bold;
+        margin-bottom: 12px;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .legend-items {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
     }
 
     .legend-item {
         display: flex;
         align-items: center;
-        margin-right: 15px;
+        gap: 8px;
     }
 
     .legend-color {
         width: 16px;
         height: 16px;
-        margin-right: 5px;
         border-radius: 3px;
+        flex-shrink: 0;
     }
 
     .legend-label {
-        font-size: 0.85rem;
-    }
-
-    .legend-section {
-        display: flex;
-        flex-direction: column;
-        margin-right: 30px;
-    }
-
-    .legend-section-title {
-        font-weight: bold;
-        margin-bottom: 8px;
         font-size: 0.9rem;
         color: #555;
     }
@@ -240,15 +246,36 @@
         .filter-buttons {
             width: 100%;
             justify-content: space-between;
+            margin-top: 15px;
         }
 
         #calendar {
             height: 500px;
+            max-height: 60vh;
         }
 
-        .calendar-legend {
-            flex-direction: column;
-            gap: 10px;
+        .legend-items {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+        }
+
+        .legend-item {
+            gap: 6px;
+        }
+
+        .legend-label {
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        #calendar {
+            height: 400px;
+            max-height: 50vh;
+        }
+
+        .legend-items {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -268,6 +295,14 @@
                 {% for unit in units %}
                 <option value="{{ unit.id }}">{{ unit.unit_number }}</option>
                 {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="building-filter">Building</label>
+            <select id="building-filter">
+                <option value="all">All Buildings</option>
+                <!-- Buildings will be populated dynamically -->
             </select>
         </div>
 
@@ -303,34 +338,35 @@
     </div>
 
     <div id="calendar"></div>
+</div>
 
-    <div class="calendar-legend">
-        <div class="legend-section">
-            <div class="legend-section-title">Booking Source</div>
-            <div class="legend-item">
-                <div class="legend-color source-airbnb"></div>
-                <div class="legend-label">Airbnb</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color source-agoda"></div>
-                <div class="legend-label">Agoda</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color source-booking"></div>
-                <div class="legend-label">Booking.com</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color source-traveloka"></div>
-                <div class="legend-label">Traveloka</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color source-ctrip"></div>
-                <div class="legend-label">Ctrip</div>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color source-whatsapp"></div>
-                <div class="legend-label">WhatsApp/Phone/Walk-In/Other</div>
-            </div>
+<!-- FIXED: Legend positioned outside and below calendar container -->
+<div class="calendar-legend">
+    <div class="legend-section-title">Booking Source</div>
+    <div class="legend-items">
+        <div class="legend-item">
+            <div class="legend-color source-airbnb"></div>
+            <div class="legend-label">Airbnb</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color source-agoda"></div>
+            <div class="legend-label">Agoda</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color source-booking"></div>
+            <div class="legend-label">Booking.com</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color source-traveloka"></div>
+            <div class="legend-label">Traveloka</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color source-ctrip"></div>
+            <div class="legend-label">Ctrip</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color source-whatsapp"></div>
+            <div class="legend-label">WhatsApp/Phone/Walk-In/Other</div>
         </div>
     </div>
 </div>
@@ -350,10 +386,10 @@
                 center: 'title',
                 right: 'dayGridMonth,listMonth'
             },
-            height: 'auto',
+            height: 800, // FIXED: Changed from 'auto' to fixed height
             selectable: false,
             nowIndicator: true,
-            dayMaxEvents: true,
+            dayMaxEvents: false,
             eventDisplay: 'block',
             weekNumbers: false,
             firstDay: 1, // Start week on Monday
@@ -548,10 +584,11 @@
                     }
                 });
 
-                // Add click handler to navigate to edit page
+                // Add click handler to navigate to bookings page with filter
                 eventEl.style.cursor = 'pointer';
                 eventEl.addEventListener('click', function() {
-                    window.location.href = "{{ url_for('bookings.get_booking', id=0) }}".replace('/0', '/') + info.event.extendedProps.booking_id;
+                    // Navigate to bookings page and highlight this specific booking
+                    window.location.href = `/bookings?highlight_id=${info.event.extendedProps.booking_id}`;
                 });
             }
         });
@@ -704,12 +741,12 @@
             resetFilters();
         });
 
-        // Function to fetch bookings
+        // Function to fetch bookings and populate building filter
         function fetchBookings() {
-            // This would normally fetch from an API endpoint
-            // For now, we'll use a placeholder approach
+            // First, populate the building filter from units
+            populateBuildingFilter();
 
-            // Create an API endpoint to fetch all bookings for all units
+            // Then fetch bookings data
             fetch('/api/calendar/bookings')
                 .then(response => response.json())
                 .then(data => {
@@ -727,6 +764,47 @@
                 });
         }
 
+        // Function to populate building filter dropdown from Unit.building
+        function populateBuildingFilter() {
+            const buildingFilter = document.getElementById('building-filter');
+
+            // Fetch buildings directly from units API
+            fetch('/api/get_units')
+                .then(response => response.json())
+                .then(units => {
+                    const buildings = new Set();
+
+                    // Extract unique buildings from units
+                    units.forEach(unit => {
+                        if (unit.building && unit.building.trim()) {
+                            buildings.add(unit.building.trim());
+                        }
+                    });
+
+                    updateBuildingDropdown(buildingFilter, buildings);
+                })
+                .catch(error => {
+                    console.error('Error fetching units for building filter:', error);
+                });
+        }
+
+        // Function to update building dropdown with options
+        function updateBuildingDropdown(buildingFilter, buildings) {
+            // Clear existing options except "All Buildings"
+            while (buildingFilter.options.length > 1) {
+                buildingFilter.remove(1);
+            }
+
+            // Sort buildings alphabetically and add to dropdown
+            const sortedBuildings = Array.from(buildings).sort();
+            sortedBuildings.forEach(building => {
+                const option = document.createElement('option');
+                option.value = building;
+                option.textContent = building;
+                buildingFilter.appendChild(option);
+            });
+        }
+
         // Generate sample data for demonstration
         function generateSampleData() {
             bookingsData = [];
@@ -737,17 +815,18 @@
             for (let i = 1; i < unitSelect.options.length; i++) {
                 units.push({
                     id: unitSelect.options[i].value,
-                    unit_number: unitSelect.options[i].text
+                    unit_number: unitSelect.options[i].text,
+                    building: 'Block ' + (i % 3 === 0 ? 'A' : i % 3 === 1 ? 'B' : 'C') // Sample buildings
                 });
             }
 
             // If no units found, create some placeholder ones
             if (units.length === 0) {
                 units.push(
-                    { id: 1, unit_number: 'A-101' },
-                    { id: 2, unit_number: 'A-102' },
-                    { id: 3, unit_number: 'B-201' },
-                    { id: 4, unit_number: 'C-301' }
+                    { id: 1, unit_number: 'A-101', building: 'Block A' },
+                    { id: 2, unit_number: 'A-102', building: 'Block A' },
+                    { id: 3, unit_number: 'B-201', building: 'Block B' },
+                    { id: 4, unit_number: 'C-301', building: 'Block C' }
                 );
             }
 
@@ -804,6 +883,7 @@
                         id: bookingId++,
                         unit_id: unit.id,
                         unit_number: unit.unit_number,
+                        building: unit.building, // Add building information
                         guest_name: guestName,
                         check_in_date: startDate.toISOString().split('T')[0],
                         check_out_date: endDate.toISOString().split('T')[0],
@@ -864,6 +944,7 @@
                     extendedProps: {
                         booking_id: booking.id,
                         unit_id: booking.unit_id,
+                        building: booking.building, // Include building in extended props
                         guest_name: booking.guest_name,
                         nights: booking.nights,
                         guests: booking.guests,
@@ -982,9 +1063,10 @@
             });
         }
 
-        // Apply filters to bookings data
+        // Apply filters to bookings data - UPDATED to filter by Unit.building
         function applyFilters() {
             const unitFilter = document.getElementById('unit-filter').value;
+            const buildingFilter = document.getElementById('building-filter').value;
             const sourceFilter = document.getElementById('source-filter').value;
             const paymentFilter = document.getElementById('payment-filter').value;
 
@@ -992,6 +1074,11 @@
             filteredData = bookingsData.filter(booking => {
                 // Apply unit filter
                 if (unitFilter !== 'all' && booking.unit_id != unitFilter) {
+                    return false;
+                }
+
+                // Apply building filter - now using building data from Unit model
+                if (buildingFilter !== 'all' && booking.building !== buildingFilter) {
                     return false;
                 }
 
@@ -1012,9 +1099,10 @@
             renderEvents(filteredData);
         }
 
-        // Reset filters to show all bookings
+        // Reset filters to show all bookings - UPDATED to include building filter
         function resetFilters() {
             document.getElementById('unit-filter').value = 'all';
+            document.getElementById('building-filter').value = 'all';
             document.getElementById('source-filter').value = 'all';
             document.getElementById('payment-filter').value = 'all';
 

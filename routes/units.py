@@ -332,5 +332,12 @@ def unit_info(id):
 def get_units():
     # Use access control to get only accessible units
     units = get_accessible_units_query().all()
-    units_list = [{'id': unit.id, 'unit_number': unit.unit_number} for unit in units]
+    units_list = [
+        {
+            'id': unit.id,
+            'unit_number': unit.unit_number,
+            'building': unit.building or ''  # Include building information
+        }
+        for unit in units
+    ]
     return jsonify(units_list)

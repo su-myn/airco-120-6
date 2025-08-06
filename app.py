@@ -799,29 +799,6 @@ def init_scheduler(app):
         replace_existing=True
     )
 
-    # 3:17 PM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=15,
-        minute=17,
-        timezone=malaysia_tz,
-        id='sync_calendars_317pm',
-        name='Calendar Sync - 3:17 PM',
-        replace_existing=True
-    )
-
-    # 3:19 PM Malaysia time
-    scheduler.add_job(
-        func=sync_all_calendars_with_context,  # Use the wrapper function
-        trigger='cron',
-        hour=15,
-        minute=19,
-        timezone=malaysia_tz,
-        id='sync_calendars_319pm',
-        name='Calendar Sync - 3:19 PM',
-        replace_existing=True
-    )
 
     # 6:00 PM Malaysia time
     scheduler.add_job(
