@@ -16,16 +16,10 @@
     }
 
     .schedule-title {
-        font-size: 1.5rem;
+        font-size: 1.8rem;
         font-weight: bold;
         margin-bottom: 10px;
         color: #333;
-    }
-
-    .schedule-date {
-        font-size: 1.2rem;
-        color: #ee4d2d;
-        margin-bottom: 5px;
     }
 
     .schedule-info {
@@ -33,12 +27,38 @@
         color: #666;
         text-align: center;
         max-width: 600px;
+        margin-bottom: 15px;
+    }
+
+    .day-section {
+        margin-bottom: 40px;
+        page-break-after: always;
+    }
+
+    .day-header {
+        background-color: #f8f9fa;
+        border: 2px solid #ee4d2d;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .day-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #ee4d2d;
+        margin-bottom: 5px;
+    }
+
+    .day-date {
+        font-size: 1.1rem;
+        color: #666;
     }
 
     .schedule-table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 20px;
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -125,6 +145,10 @@
             box-shadow: none;
         }
 
+        .day-section:last-child {
+            page-break-after: auto;
+        }
+
         @page {
             size: landscape;
             margin: 1cm;
@@ -138,7 +162,6 @@
         padding: 10px 15px;
         border-radius: 4px;
         cursor: pointer;
-        margin-top: 15px;
         font-weight: bold;
     }
 
@@ -152,52 +175,108 @@
 <div class="schedule-content">
     <div class="schedule-header">
         <div class="schedule-title">Jadual Pembersihan Unit</div>
-        <div class="schedule-date">{{ tomorrow.strftime('%A, %d %B %Y') }}</div>
         <div class="schedule-info">
             Cleaner perlu menyediakan tuala, beg sampah, dan tisu toilet seperti yang dinyatakan. Untuk unit yang ada check-in, siapkan sebelum 3pm.
         </div>
         <button class="print-btn" onclick="window.print()">Cetak Jadual</button>
     </div>
 
-    {% if checkouts %}
-    <table class="schedule-table">
-        <thead>
-            <tr>
-                <th>Unit</th>
-                <th>Tuala</th>
-                <th>Beg Sampah</th>
-                <th>Gulungan Tisu Toilet</th>
-                <th>Ada Check-in atau Tidak</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for checkout_data in checkouts %}
-            <tr>
-                <td class="unit-cell">
-                    {{ checkout_data.unit.unit_number }}
-                    {% if checkout_data.unit.building %}
-                    <br><small>{{ checkout_data.unit.building }}</small>
-                    {% endif %}
-                </td>
-                <td>{{ checkout_data.towels }}</td>
-                <td>{{ checkout_data.rubbish_bags }}</td>
-                <td>{{ checkout_data.toilet_rolls }}</td>
-                <td>
-                    {% if checkout_data.has_checkin %}
-                    <span class="ada-label ada">Ada</span>
-                    {% else %}
-                    <span class="ada-label tidak">Tidak</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🧹</div>
-        <div class="empty-state-message">Tiada unit yang perlu dibersihkan untuk esok.</div>
+    <!-- TODAY'S SCHEDULE -->
+    <div class="day-section">
+        <div class="day-header">
+            <div class="day-title">HARI INI</div>
+            <div class="day-date">{{ today.strftime('%A, %d %B %Y') }}</div>
+        </div>
+
+        {% if checkouts_today %}
+        <table class="schedule-table">
+            <thead>
+                <tr>
+                    <th>Unit</th>
+                    <th>Tuala</th>
+                    <th>Beg Sampah</th>
+                    <th>Gulungan Tisu Toilet</th>
+                    <th>Ada Check-in atau Tidak</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for checkout_data in checkouts_today %}
+                <tr>
+                    <td class="unit-cell">
+                        {{ checkout_data.unit.unit_number }}
+                        {% if checkout_data.unit.building %}
+                        <br><small>{{ checkout_data.unit.building }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ checkout_data.towels }}</td>
+                    <td>{{ checkout_data.rubbish_bags }}</td>
+                    <td>{{ checkout_data.toilet_rolls }}</td>
+                    <td>
+                        {% if checkout_data.has_checkin %}
+                        <span class="ada-label ada">Ada</span>
+                        {% else %}
+                        <span class="ada-label tidak">Tidak</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🧹</div>
+            <div class="empty-state-message">Tiada unit yang perlu dibersihkan untuk hari ini.</div>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
+
+    <!-- TOMORROW'S SCHEDULE -->
+    <div class="day-section">
+        <div class="day-header">
+            <div class="day-title">ESOK</div>
+            <div class="day-date">{{ tomorrow.strftime('%A, %d %B %Y') }}</div>
+        </div>
+
+        {% if checkouts_tomorrow %}
+        <table class="schedule-table">
+            <thead>
+                <tr>
+                    <th>Unit</th>
+                    <th>Tuala</th>
+                    <th>Beg Sampah</th>
+                    <th>Gulungan Tisu Toilet</th>
+                    <th>Ada Check-in atau Tidak</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for checkout_data in checkouts_tomorrow %}
+                <tr>
+                    <td class="unit-cell">
+                        {{ checkout_data.unit.unit_number }}
+                        {% if checkout_data.unit.building %}
+                        <br><small>{{ checkout_data.unit.building }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ checkout_data.towels }}</td>
+                    <td>{{ checkout_data.rubbish_bags }}</td>
+                    <td>{{ checkout_data.toilet_rolls }}</td>
+                    <td>
+                        {% if checkout_data.has_checkin %}
+                        <span class="ada-label ada">Ada</span>
+                        {% else %}
+                        <span class="ada-label tidak">Tidak</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🧹</div>
+            <div class="empty-state-message">Tiada unit yang perlu dibersihkan untuk esok.</div>
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

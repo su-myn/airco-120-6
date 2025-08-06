@@ -100,7 +100,8 @@ def cleaning_schedule():
         flash('You do not have permission to access this page.', 'danger')
         return redirect(url_for('dashboard.dashboard'))
 
-    tomorrow = datetime.now().date() + timedelta(days=1)
+    today = datetime.now().date()
+    tomorrow = today + timedelta(days=1)
 
     # Get accessible units based on user role and access control
     if current_user.role.name in ['Manager', 'Admin'] or current_user.is_admin:
@@ -122,16 +123,32 @@ def cleaning_schedule():
         # No accessible units
         if current_user.role.name in ['Manager', 'Admin'] or current_user.is_admin:
             return render_template('cleaning_schedule_manager.html',
-                                   cleaner_schedules=[],
+                                   cleaner_schedules_today=[],
+                                   cleaner_schedules_tomorrow=[],
+                                   today=today,
                                    tomorrow=tomorrow)
         else:
             return render_template('cleaning_schedule.html',
-                                   checkouts=[],
+                                   checkouts_today=[],
+                                   checkouts_tomorrow=[],
+                                   today=today,
                                    tomorrow=tomorrow)
 
-    # Get tomorrow's checkouts and check-ins (filtered by accessible units)
+    # Get today's and tomorrow's checkouts and check-ins (filtered by accessible units)
+    checkouts_today = BookingForm.query.filter(
+        BookingForm.check_out_date == today,
+        BookingForm.unit_id.in_(accessible_unit_ids),
+        BookingForm.company_id == current_user.company_id
+    ).all()
+
     checkouts_tomorrow = BookingForm.query.filter(
         BookingForm.check_out_date == tomorrow,
+        BookingForm.unit_id.in_(accessible_unit_ids),
+        BookingForm.company_id == current_user.company_id
+    ).all()
+
+    checkins_today = BookingForm.query.filter(
+        BookingForm.check_in_date == today,
         BookingForm.unit_id.in_(accessible_unit_ids),
         BookingForm.company_id == current_user.company_id
     ).all()
@@ -143,28 +160,29 @@ def cleaning_schedule():
     ).all()
 
     # Map unit_id to checkin booking for fast lookups
-    checkin_map = {booking.unit_id: booking for booking in checkins_tomorrow}
+    checkin_map_today = {booking.unit_id: booking for booking in checkins_today}
+    checkin_map_tomorrow = {booking.unit_id: booking for booking in checkins_tomorrow}
 
     # For managers and admins, show all cleaners' schedules (but only for accessible units)
     if current_user.role.name in ['Manager', 'Admin', "Staff"] or current_user.is_admin:
         cleaners = User.query.filter_by(company_id=current_user.company_id, is_cleaner=True).all()
 
-        cleaner_schedules = []
+        cleaner_schedules_today = []
+        cleaner_schedules_tomorrow = []
+
         for cleaner in cleaners:
             # Get units assigned to this cleaner that are also accessible to the manager/admin
             assigned_units = cleaner.assigned_units
             accessible_assigned_units = [unit for unit in assigned_units if unit.id in accessible_unit_ids]
 
-            cleaner_checkouts = []
-
+            # Process today's schedule
+            cleaner_checkouts_today = []
             for unit in accessible_assigned_units:
-                for checkout in checkouts_tomorrow:
+                for checkout in checkouts_today:
                     if checkout.unit_id == unit.id:
-                        # Check if there's a check-in tomorrow for this unit
-                        has_checkin = unit.id in checkin_map
-                        checkin_booking = checkin_map.get(unit.id)
+                        has_checkin = unit.id in checkin_map_today
+                        checkin_booking = checkin_map_today.get(unit.id)
 
-                        # Calculate supplies based on whether there's a check-in tomorrow
                         if has_checkin:
                             towels = checkin_booking.number_of_guests
                             rubbish_bags = checkin_booking.number_of_nights
@@ -174,7 +192,7 @@ def cleaning_schedule():
                             rubbish_bags = 2
                             toilet_rolls = 2 * (unit.toilet_count or 1)
 
-                        cleaner_checkouts.append({
+                        cleaner_checkouts_today.append({
                             'unit': unit,
                             'checkout': checkout,
                             'has_checkin': has_checkin,
@@ -184,29 +202,61 @@ def cleaning_schedule():
                             'toilet_rolls': toilet_rolls
                         })
 
-            if cleaner_checkouts:
-                cleaner_schedules.append({
+            if cleaner_checkouts_today:
+                cleaner_schedules_today.append({
                     'cleaner': cleaner,
-                    'checkouts': cleaner_checkouts
+                    'checkouts': cleaner_checkouts_today
+                })
+
+            # Process tomorrow's schedule
+            cleaner_checkouts_tomorrow = []
+            for unit in accessible_assigned_units:
+                for checkout in checkouts_tomorrow:
+                    if checkout.unit_id == unit.id:
+                        has_checkin = unit.id in checkin_map_tomorrow
+                        checkin_booking = checkin_map_tomorrow.get(unit.id)
+
+                        if has_checkin:
+                            towels = checkin_booking.number_of_guests
+                            rubbish_bags = checkin_booking.number_of_nights
+                            toilet_rolls = checkin_booking.number_of_nights * (unit.toilet_count or 1)
+                        else:
+                            towels = unit.towel_count or 2
+                            rubbish_bags = 2
+                            toilet_rolls = 2 * (unit.toilet_count or 1)
+
+                        cleaner_checkouts_tomorrow.append({
+                            'unit': unit,
+                            'checkout': checkout,
+                            'has_checkin': has_checkin,
+                            'checkin_booking': checkin_booking,
+                            'towels': towels,
+                            'rubbish_bags': rubbish_bags,
+                            'toilet_rolls': toilet_rolls
+                        })
+
+            if cleaner_checkouts_tomorrow:
+                cleaner_schedules_tomorrow.append({
+                    'cleaner': cleaner,
+                    'checkouts': cleaner_checkouts_tomorrow
                 })
 
         return render_template('cleaning_schedule_manager.html',
-                               cleaner_schedules=cleaner_schedules,
+                               cleaner_schedules_today=cleaner_schedules_today,
+                               cleaner_schedules_tomorrow=cleaner_schedules_tomorrow,
+                               today=today,
                                tomorrow=tomorrow)
 
     # For cleaners only, show individual schedule view
     else:
-        # This now only applies to cleaners
-        my_checkouts = []
-
+        # Process today's schedule
+        my_checkouts_today = []
         for unit in accessible_units:
-            for checkout in checkouts_tomorrow:
+            for checkout in checkouts_today:
                 if checkout.unit_id == unit.id:
-                    # Check if there's a check-in tomorrow for this unit
-                    has_checkin = unit.id in checkin_map
-                    checkin_booking = checkin_map.get(unit.id)
+                    has_checkin = unit.id in checkin_map_today
+                    checkin_booking = checkin_map_today.get(unit.id)
 
-                    # Calculate supplies based on whether there's a check-in tomorrow
                     if has_checkin:
                         towels = checkin_booking.number_of_guests
                         rubbish_bags = checkin_booking.number_of_nights
@@ -216,7 +266,34 @@ def cleaning_schedule():
                         rubbish_bags = 2
                         toilet_rolls = 2 * (unit.toilet_count or 1)
 
-                    my_checkouts.append({
+                    my_checkouts_today.append({
+                        'unit': unit,
+                        'checkout': checkout,
+                        'has_checkin': has_checkin,
+                        'checkin_booking': checkin_booking,
+                        'towels': towels,
+                        'rubbish_bags': rubbish_bags,
+                        'toilet_rolls': toilet_rolls
+                    })
+
+        # Process tomorrow's schedule
+        my_checkouts_tomorrow = []
+        for unit in accessible_units:
+            for checkout in checkouts_tomorrow:
+                if checkout.unit_id == unit.id:
+                    has_checkin = unit.id in checkin_map_tomorrow
+                    checkin_booking = checkin_map_tomorrow.get(unit.id)
+
+                    if has_checkin:
+                        towels = checkin_booking.number_of_guests
+                        rubbish_bags = checkin_booking.number_of_nights
+                        toilet_rolls = checkin_booking.number_of_nights * (unit.toilet_count or 1)
+                    else:
+                        towels = unit.towel_count or 2
+                        rubbish_bags = 2
+                        toilet_rolls = 2 * (unit.toilet_count or 1)
+
+                    my_checkouts_tomorrow.append({
                         'unit': unit,
                         'checkout': checkout,
                         'has_checkin': has_checkin,
@@ -227,5 +304,7 @@ def cleaning_schedule():
                     })
 
         return render_template('cleaning_schedule.html',
-                               checkouts=my_checkouts,
+                               checkouts_today=my_checkouts_today,
+                               checkouts_tomorrow=my_checkouts_tomorrow,
+                               today=today,
                                tomorrow=tomorrow)

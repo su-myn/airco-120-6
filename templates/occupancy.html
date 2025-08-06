@@ -384,14 +384,19 @@
                         // Make occupancy clickable if there are bookings
                         if (count > 0) {
                             occupancyElement.style.cursor = 'pointer';
-                            occupancyElement.addEventListener('click', function() {
-                                // Create the date for filtering (YYYY-MM-DD format)
-                                const clickedDate = new Date(year, month - 1, day);
-                                const dateStr = clickedDate.toISOString().split('T')[0];
 
-                                // Navigate to bookings page with date filter
-                                window.location.href = `/bookings?date=${dateStr}&occupancy=true`;
-                            });
+                            // Capture the day value in the closure
+                            (function(clickedDay) {
+                                occupancyElement.addEventListener('click', function() {
+                                    // Create the date string directly
+                                    const paddedMonth = month.toString().padStart(2, '0');
+                                    const paddedDay = clickedDay.toString().padStart(2, '0');
+                                    const dateStr = `${year}-${paddedMonth}-${paddedDay}`;
+
+                                    // Navigate to bookings page with date filter
+                                    window.location.href = `/bookings?date=${dateStr}&occupancy=true`;
+                                });
+                            })(parseInt(day));
                         }
                     }
                 }
@@ -400,10 +405,7 @@
                 for (const [day, holidays] of Object.entries(data.holidays)) {
                     const holidayContainer = document.getElementById(`holidays-${day}`);
                     if (holidayContainer) {
-                        // Clear any existing holidays
                         holidayContainer.innerHTML = '';
-
-                        // Add each holiday
                         holidays.forEach(holiday => {
                             const holidayElement = document.createElement('div');
                             holidayElement.className = `holiday-banner holiday-${holiday.type}`;
@@ -420,7 +422,6 @@
             })
             .catch(error => {
                 console.error('Error fetching occupancy data:', error);
-                // Hide loading indicator, show error message
                 loadingIndicator.style.display = 'none';
                 alert('Error loading occupancy data. Please try again.');
             });
