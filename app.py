@@ -462,6 +462,9 @@ def create_cleaner_role():
 
 def create_holiday_types():
     """Create default holiday types for all countries"""
+    # Import inside the function to avoid circular imports
+    from models import HolidayType, db
+
     default_types = [
         # Public Holiday Types
         {"name": "Malaysia Public Holiday", "color": "#4CAF50", "is_system": True},
@@ -501,6 +504,8 @@ def create_holiday_types():
         print(f"Created {created_count} default holiday types")
     else:
         print("All default holiday types already exist")
+
+    return created_count
 
 
 # FIXED: Create a wrapper function that runs with application context
