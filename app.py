@@ -439,26 +439,68 @@ def create_cleaner_role():
         print("Cleaner role created")
 
 
-def create_holiday_types():
-    # Check if holiday types exist
-    if HolidayType.query.count() == 0:
-        # Create default holiday types
-        holiday_types = [
-            {"name": "Malaysia Public Holiday", "color": "#4CAF50", "is_system": True},
-            {"name": "Malaysia School Holiday", "color": "#2196F3", "is_system": True},
-            {"name": "Custom Holiday", "color": "#9C27B0", "is_system": True}
-        ]
+#def create_holiday_types():
+#    # Check if holiday types exist
+#    if HolidayType.query.count() == 0:
+#        # Create default holiday types
+#        holiday_types = [
+#            {"name": "Malaysia Public Holiday", "color": "#4CAF50", "is_system": True},
+#            {"name": "Malaysia School Holiday", "color": "#2196F3", "is_system": True},
+#            {"name": "Custom Holiday", "color": "#9C27B0", "is_system": True}
+#        ]
+#
+#        for type_data in holiday_types:
+#            holiday_type = HolidayType(
+#                name=type_data["name"],
+#                color=type_data["color"],
+#                is_system=type_data["is_system"]
+#            )
+#            db.session.add(holiday_type)
+#
+#        db.session.commit()
+#        print("Default holiday types created")
 
-        for type_data in holiday_types:
+def create_holiday_types():
+    """Create default holiday types for all countries"""
+    default_types = [
+        # Public Holiday Types
+        {"name": "Malaysia Public Holiday", "color": "#4CAF50", "is_system": True},
+        {"name": "Singapore Public Holiday", "color": "#4CAF50", "is_system": True},
+        {"name": "Indonesia Public Holiday", "color": "#4CAF50", "is_system": True},
+        {"name": "China Public Holiday", "color": "#4CAF50", "is_system": True},
+        {"name": "Korea Public Holiday", "color": "#4CAF50", "is_system": True},
+        {"name": "Japan Public Holiday", "color": "#4CAF50", "is_system": True},
+
+        # School Holiday Types
+        {"name": "Malaysia School Holiday", "color": "#2196F3", "is_system": True},
+        {"name": "Singapore School Holiday", "color": "#2196F3", "is_system": True},
+        {"name": "Indonesia School Holiday", "color": "#2196F3", "is_system": True},
+        {"name": "China School Holiday", "color": "#2196F3", "is_system": True},
+        {"name": "Korea School Holiday", "color": "#2196F3", "is_system": True},
+        {"name": "Japan School Holiday", "color": "#2196F3", "is_system": True},
+
+        # Custom
+        {"name": "Custom Holiday", "color": "#9C27B0", "is_system": True}
+    ]
+
+    created_count = 0
+
+    for type_data in default_types:
+        existing_type = HolidayType.query.filter_by(name=type_data["name"]).first()
+        if not existing_type:
             holiday_type = HolidayType(
                 name=type_data["name"],
                 color=type_data["color"],
                 is_system=type_data["is_system"]
             )
             db.session.add(holiday_type)
+            created_count += 1
 
+    if created_count > 0:
         db.session.commit()
-        print("Default holiday types created")
+        print(f"Created {created_count} default holiday types")
+    else:
+        print("All default holiday types already exist")
 
 
 # FIXED: Create a wrapper function that runs with application context
