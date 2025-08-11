@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, Unit, BookingForm, Holiday, HolidayType
+from models import db, Unit, BookingForm, Holiday, HolidayType, CompanyHolidayPreference, CompanyHolidayOverride
 from datetime import datetime, timedelta, date
 import calendar
 from functools import wraps
@@ -72,6 +72,10 @@ def occupancy():
                            today=today)
 
 
+# Update the get_occupancy_data route in occupancy.py
+
+# Update the get_occupancy_data route in occupancy.py
+
 @occupancy_bp.route('/api/occupancy/<int:year>/<int:month>')
 @login_required
 def get_occupancy_data(year, month):
@@ -79,7 +83,6 @@ def get_occupancy_data(year, month):
     accessible_unit_ids = current_user.get_accessible_unit_ids()
 
     if not accessible_unit_ids:
-        # If no accessible units, return empty data
         return jsonify({
             "occupancy": {},
             "total_units": 0,
@@ -95,7 +98,6 @@ def get_occupancy_data(year, month):
     accessible_active_unit_ids = [unit.id for unit in accessible_active_units]
 
     if not accessible_active_unit_ids:
-        # If no accessible active units, return empty data
         return jsonify({
             "occupancy": {},
             "total_units": 0,
@@ -104,139 +106,167 @@ def get_occupancy_data(year, month):
 
     # Get the first and last day of the month
     first_day = date(year, month, 1)
-    # Get the last day of the month
     if month == 12:
         last_day = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         last_day = date(year, month + 1, 1) - timedelta(days=1)
 
-    # FIXED: Get bookings that overlap with this month for accessible ACTIVE units only
-    # The key issue was in the overlap condition - we need to include the check-out date
+    # Get bookings that overlap with this month for accessible ACTIVE units only
     bookings = BookingForm.query.filter(
         BookingForm.company_id == current_user.company_id,
         BookingForm.unit_id.in_(accessible_active_unit_ids),
-        BookingForm.is_cancelled != True,  # ADDED: Exclude cancelled bookings
+        BookingForm.is_cancelled != True,
         BookingForm.check_in_date <= last_day,
-        BookingForm.check_out_date > first_day  # FIXED: Use > instead of >=
+        BookingForm.check_out_date > first_day
     ).all()
 
     # Calculate occupancy for each day of the month
     import calendar as cal_module
-    calendar_days = cal_module.monthcalendar(year, month)
-
-    # FIXED: Get all days in the month, not just from calendar grid
     days_in_month = cal_module.monthrange(year, month)[1]
-
-    # Initialize occupancy data for ALL days in the month
     occupancy_data = {day: 0 for day in range(1, days_in_month + 1)}
 
-    # FIXED: Count occupied units for each day with proper date logic
+    # Count occupied units for each day
     for booking in bookings:
-        # For each day in the month, check if this booking covers that day
         for day in range(1, days_in_month + 1):
             current_date = date(year, month, day)
-
-            # FIXED: A unit is occupied on a date if:
-            # check_in_date <= current_date < check_out_date
-            # This means guest checks in on check_in_date and checks out on check_out_date
-            # They occupy the unit on check_in_date but NOT on check_out_date
             if booking.check_in_date <= current_date < booking.check_out_date:
                 occupancy_data[day] += 1
 
     # Get total accessible ACTIVE units
     total_units = len(accessible_active_unit_ids)
 
-    # Debug logging - you can remove this after fixing
-    print(f"DEBUG: Month {month}/{year}")
-    print(f"DEBUG: Total active units: {total_units}")
-    print(f"DEBUG: Found {len(bookings)} bookings")
-    print(f"DEBUG: Occupancy for day 31: {occupancy_data.get(31, 'N/A')}")
-
-    # Sample booking debug for day 31 (you can remove this)
-    if 31 in occupancy_data:
-        day_31_date = date(year, month, 31)
-        print(f"DEBUG: Checking bookings for {day_31_date}:")
-        for booking in bookings:
-            covers_day_31 = booking.check_in_date <= day_31_date < booking.check_out_date
-            print(
-                f"  Booking {booking.id}: {booking.check_in_date} to {booking.check_out_date}, covers day 31: {covers_day_31}")
-
-    # Get holidays for this month (existing holiday logic remains the same)
+    # FIXED: Get holidays with better type detection
     holiday_data = {}
 
-    # First get public and school holidays from the system
-    holiday_types = HolidayType.query.filter(
-        HolidayType.name.in_(["Malaysia Public Holiday", "Malaysia School Holiday", "Custom Holiday"])
+    # Country flag mapping
+    country_flags = {
+        'Malaysia': '🇲🇾',
+        'Singapore': '🇸🇬',
+        'Indonesia': '🇮🇩',
+        'China': '🇨🇳',
+        'Korea': '🇰🇷',
+        'Japan': '🇯🇵'
+    }
+
+    print(f"DEBUG: Getting holidays for company {current_user.company_id} for {year}-{month}")
+
+    # FIXED: Get ALL holiday types that contain country names (more flexible approach)
+    all_holiday_types = HolidayType.query.all()
+    country_holiday_type_ids = []
+
+    for ht in all_holiday_types:
+        for country in country_flags.keys():
+            if country in ht.name:
+                country_holiday_type_ids.append(ht.id)
+                print(f"DEBUG: Found holiday type: {ht.name} (ID: {ht.id})")
+                break
+
+    print(f"DEBUG: All country holiday type IDs: {country_holiday_type_ids}")
+
+    # Get enabled holiday types for this company
+    enabled_preferences = CompanyHolidayPreference.query.filter_by(
+        company_id=current_user.company_id,
+        is_enabled=True
     ).all()
 
-    for holiday_type in holiday_types:
-        # Get deleted holiday dates for this company
-        deleted_holidays = Holiday.query.filter(
-            Holiday.holiday_type_id == holiday_type.id,
-            Holiday.company_id == current_user.company_id,
-            Holiday.is_deleted == True,
-            Holiday.date.between(first_day, last_day)
-        ).all()
-        deleted_dates = {h.date for h in deleted_holidays}
+    enabled_holiday_type_ids = [pref.holiday_type_id for pref in enabled_preferences]
+    print(f"DEBUG: Company enabled holiday type IDs: {enabled_holiday_type_ids}")
 
-        # Get company-specific additions
+    # FIXED: Use intersection to get both country-related AND enabled types
+    final_holiday_type_ids = list(set(country_holiday_type_ids) & set(enabled_holiday_type_ids))
+    print(f"DEBUG: Final holiday type IDs to query: {final_holiday_type_ids}")
+
+    if final_holiday_type_ids:
+        # Get system holidays for enabled countries
+        system_holidays = Holiday.query.filter(
+            Holiday.holiday_type_id.in_(final_holiday_type_ids),
+            Holiday.company_id.is_(None),  # System holidays only
+            Holiday.date.between(first_day, last_day),
+            Holiday.is_active == True
+        ).all()
+
+        print(f"DEBUG: Found {len(system_holidays)} system holidays")
+        for holiday in system_holidays:
+            print(f"  - {holiday.date}: {holiday.name} ({holiday.holiday_type.name})")
+
+        # Get company overrides for these holidays
+        overrides = {}
+        if system_holidays:
+            holiday_ids = [h.id for h in system_holidays]
+            company_overrides = CompanyHolidayOverride.query.filter(
+                CompanyHolidayOverride.company_id == current_user.company_id,
+                CompanyHolidayOverride.holiday_id.in_(holiday_ids)
+            ).all()
+
+            for override in company_overrides:
+                overrides[override.holiday_id] = override.is_enabled
+                print(f"DEBUG: Override for holiday {override.holiday_id}: {override.is_enabled}")
+
+        # Process system holidays
+        for holiday in system_holidays:
+            # Check if this holiday is enabled for this company (default: enabled)
+            is_enabled = overrides.get(holiday.id, True)
+
+            print(f"DEBUG: Processing holiday {holiday.name} on {holiday.date}: enabled={is_enabled}")
+
+            if not is_enabled:
+                print(f"DEBUG: Skipping disabled holiday: {holiday.name}")
+                continue
+
+            day = holiday.date.day
+            if day not in holiday_data:
+                holiday_data[day] = []
+
+            # Extract country from holiday type name and get flag
+            holiday_type_name = holiday.holiday_type.name
+            country_flag = ''
+            for country, flag in country_flags.items():
+                if country in holiday_type_name:
+                    country_flag = flag
+                    break
+
+            # Determine holiday type for display
+            if "Public" in holiday_type_name:
+                type_class = "public"
+            elif "School" in holiday_type_name:
+                type_class = "school"
+            else:
+                type_class = "custom"
+
+            print(f"DEBUG: Adding holiday to day {day}: {country_flag} {holiday.name} (type: {type_class})")
+
+            holiday_data[day].append({
+                "name": f"{country_flag} {holiday.name}",
+                "type": type_class,
+                "color": holiday.holiday_type.color
+            })
+
+    # Also get company-specific custom holidays
+    custom_holiday_types = HolidayType.query.filter_by(name="Custom Holiday").all()
+
+    for holiday_type in custom_holiday_types:
         company_holidays = Holiday.query.filter(
             Holiday.holiday_type_id == holiday_type.id,
             Holiday.company_id == current_user.company_id,
             Holiday.is_deleted == False,
+            Holiday.is_active == True,
             Holiday.date.between(first_day, last_day)
         ).all()
 
-        # Add company-specific holidays
+        print(f"DEBUG: Found {len(company_holidays)} custom holidays")
+
         for holiday in company_holidays:
             day = holiday.date.day
             if day not in holiday_data:
                 holiday_data[day] = []
 
-            # Determine holiday type for display
-            if "Public" in holiday_type.name:
-                type_class = "public"
-            elif "School" in holiday_type.name:
-                type_class = "school"
-            else:
-                type_class = "custom"
-
             holiday_data[day].append({
                 "name": holiday.name,
-                "type": type_class,
+                "type": "custom",
                 "color": holiday_type.color
             })
 
-        # If it's a system holiday type, add system holidays that aren't deleted by this company
-        if holiday_type.name != "Custom Holiday":
-            system_holidays = Holiday.query.filter(
-                Holiday.holiday_type_id == holiday_type.id,
-                Holiday.company_id == None,
-                Holiday.date.between(first_day, last_day)
-            ).all()
-
-            for holiday in system_holidays:
-                # Skip if this date is marked as deleted for this company
-                if holiday.date in deleted_dates:
-                    continue
-
-                day = holiday.date.day
-                if day not in holiday_data:
-                    holiday_data[day] = []
-
-                # Determine holiday type for display
-                if "Public" in holiday_type.name:
-                    type_class = "public"
-                elif "School" in holiday_type.name:
-                    type_class = "school"
-                else:
-                    type_class = "custom"
-
-                holiday_data[day].append({
-                    "name": holiday.name,
-                    "type": type_class,
-                    "color": holiday_type.color
-                })
+    print(f"DEBUG: Final holiday_data: {holiday_data}")
 
     return jsonify({
         "occupancy": occupancy_data,
@@ -482,3 +512,266 @@ def delete_holiday(id):
     return redirect(url_for('occupancy.manage_holidays',
                             type=redirect_type,
                             success_message=success_message))
+
+
+@occupancy_bp.route('/toggle_country_calendar', methods=['POST'])
+@login_required
+def toggle_country_calendar():
+    """Toggle a country's holiday calendar for the current company"""
+    data = request.get_json()
+    country = data.get('country')
+    is_enabled = data.get('enabled', False)
+
+    # FIXED: Determine the current page type from the referrer URL
+    current_url = request.referrer or ''
+    is_school_page = 'type=school' in current_url
+
+    print(f"DEBUG: toggle_country_calendar - country: {country}, enabled: {is_enabled}, is_school_page: {is_school_page}")
+
+    # FIXED: Map country names to the SPECIFIC holiday type based on the current page
+    if is_school_page:
+        country_mapping = {
+            'malaysia': 'Malaysia School Holiday',
+            'singapore': 'Singapore School Holiday',
+            'indonesia': 'Indonesia School Holiday',
+            'china': 'China School Holiday',
+            'korea': 'Korea School Holiday',
+            'japan': 'Japan School Holiday'
+        }
+    else:
+        country_mapping = {
+            'malaysia': 'Malaysia Public Holiday',
+            'singapore': 'Singapore Public Holiday',
+            'indonesia': 'Indonesia Public Holiday',
+            'china': 'China Public Holiday',
+            'korea': 'Korea Public Holiday',
+            'japan': 'Japan Public Holiday'
+        }
+
+    holiday_type_name = country_mapping.get(country.lower())
+    if not holiday_type_name:
+        print(f"DEBUG: Invalid country: {country}")
+        return jsonify({'success': False, 'message': 'Invalid country'})
+
+    print(f"DEBUG: Looking for holiday type: {holiday_type_name}")
+
+    # Get the holiday type
+    holiday_type = HolidayType.query.filter_by(name=holiday_type_name).first()
+    if not holiday_type:
+        print(f"DEBUG: Holiday type not found: {holiday_type_name}")
+        return jsonify({'success': False, 'message': 'Holiday type not found'})
+
+    print(f"DEBUG: Found holiday type: {holiday_type.name} (ID: {holiday_type.id})")
+
+    # Get or create company holiday preference for THIS SPECIFIC holiday type
+    preference = CompanyHolidayPreference.query.filter_by(
+        company_id=current_user.company_id,
+        holiday_type_id=holiday_type.id
+    ).first()
+
+    if not preference:
+        preference = CompanyHolidayPreference(
+            company_id=current_user.company_id,
+            holiday_type_id=holiday_type.id,
+            is_enabled=is_enabled
+        )
+        db.session.add(preference)
+        print(f"DEBUG: Created new preference for {holiday_type.name}: {is_enabled}")
+    else:
+        preference.is_enabled = is_enabled
+        print(f"DEBUG: Updated existing preference for {holiday_type.name}: {is_enabled}")
+
+    db.session.commit()
+
+    holiday_category = "school" if is_school_page else "public"
+    return jsonify({
+        'success': True,
+        'message': f'{country.title()} {holiday_category} calendar {"enabled" if is_enabled else "disabled"}'
+    })
+
+
+@occupancy_bp.route('/get_country_holidays/<country>')
+@occupancy_bp.route('/get_country_holidays/<country>/<holiday_type>')
+@login_required
+def get_country_holidays(country, holiday_type='public'):
+    """Get holidays for a specific country - UPDATED VERSION"""
+
+    # Map country names to holiday type names
+    if holiday_type == 'school':
+        country_mapping = {
+            'malaysia': 'Malaysia School Holiday',
+            'singapore': 'Singapore School Holiday',
+            'indonesia': 'Indonesia School Holiday',
+            'china': 'China School Holiday',
+            'korea': 'Korea School Holiday',
+            'japan': 'Japan School Holiday'
+        }
+    else:
+        country_mapping = {
+            'malaysia': 'Malaysia Public Holiday',
+            'singapore': 'Singapore Public Holiday',
+            'indonesia': 'Indonesia Public Holiday',
+            'china': 'China Public Holiday',
+            'korea': 'Korea Public Holiday',
+            'japan': 'Japan Public Holiday'
+        }
+
+    # Map country names to emoji flags
+    country_flags = {
+        'malaysia': '🇲🇾',
+        'singapore': '🇸🇬',
+        'indonesia': '🇮🇩',
+        'china': '🇨🇳',
+        'korea': '🇰🇷',
+        'japan': '🇯🇵'
+    }
+
+    holiday_type_name = country_mapping.get(country.lower())
+    if not holiday_type_name:
+        return jsonify({'success': False, 'message': 'Invalid country'})
+
+    # Get the holiday type
+    holiday_type = HolidayType.query.filter_by(name=holiday_type_name).first()
+    if not holiday_type:
+        return jsonify({'success': False, 'message': 'Holiday type not found'})
+
+    # Get all system holidays for this country
+    holidays = Holiday.query.filter_by(
+        holiday_type_id=holiday_type.id,
+        company_id=None  # System holidays only
+    ).order_by(Holiday.date).all()
+
+    # Get company overrides for these holidays
+    overrides = {}
+    if holidays:
+        holiday_ids = [h.id for h in holidays]
+        company_overrides = CompanyHolidayOverride.query.filter(
+            CompanyHolidayOverride.company_id == current_user.company_id,
+            CompanyHolidayOverride.holiday_id.in_(holiday_ids)
+        ).all()
+
+        for override in company_overrides:
+            overrides[override.holiday_id] = override.is_enabled
+
+    # Format holidays data - UPDATED to include day_of_week and states
+    holidays_data = []
+    for holiday in holidays:
+        # Default to enabled unless specifically disabled
+        is_enabled = overrides.get(holiday.id, True)
+
+        # Calculate day of week if not stored
+        day_of_week = holiday.day_of_week
+        if not day_of_week:
+            day_of_week = holiday.date.strftime('%A')
+
+        holidays_data.append({
+            'id': holiday.id,
+            'date': holiday.date.strftime('%Y-%m-%d'),
+            'name': holiday.name,
+            'day_of_week': day_of_week,  # ADDED: Day of week
+            'states': holiday.states or '',  # ADDED: States/regions
+            'active': is_enabled,
+            'flag': country_flags.get(country.lower(), '')
+        })
+
+    return jsonify({
+        'success': True,
+        'holidays': holidays_data,
+        'country': country.title(),
+        'flag': country_flags.get(country.lower(), '')
+    })
+
+
+@occupancy_bp.route('/toggle_holiday_date', methods=['POST'])
+@login_required
+def toggle_holiday_date():
+    """Toggle a specific holiday date for the current company"""
+    data = request.get_json()
+    holiday_id = data.get('holiday_id')
+    is_enabled = data.get('enabled', True)
+
+    # Get the holiday
+    holiday = Holiday.query.get_or_404(holiday_id)
+
+    # Get or create company holiday override
+    override = CompanyHolidayOverride.query.filter_by(
+        company_id=current_user.company_id,
+        holiday_id=holiday_id
+    ).first()
+
+    if not override:
+        override = CompanyHolidayOverride(
+            company_id=current_user.company_id,
+            holiday_id=holiday_id,
+            is_enabled=is_enabled
+        )
+        db.session.add(override)
+    else:
+        override.is_enabled = is_enabled
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': f'Holiday "{holiday.name}" {"enabled" if is_enabled else "disabled"}'
+    })
+
+
+@occupancy_bp.route('/get_company_holiday_preferences')
+@login_required
+def get_company_holiday_preferences():
+    """Get the current company's holiday calendar preferences"""
+
+    # FIXED: Determine what type of holidays to check based on referrer
+    current_url = request.referrer or ''
+    is_school_page = 'type=school' in current_url
+
+    print(f"DEBUG: get_company_holiday_preferences - is_school_page: {is_school_page}")
+
+    # Get all enabled holiday preferences for this company
+    preferences = CompanyHolidayPreference.query.filter_by(
+        company_id=current_user.company_id,
+        is_enabled=True
+    ).all()
+
+    enabled_countries = []
+    for pref in preferences:
+        holiday_type_name = pref.holiday_type.name
+        print(f"DEBUG: Checking preference: {holiday_type_name}")
+
+        # FIXED: Only include countries that match the current page type
+        if is_school_page and 'School' in holiday_type_name:
+            # Extract country name from school holiday type
+            if 'Malaysia' in holiday_type_name:
+                enabled_countries.append('malaysia')
+            elif 'Singapore' in holiday_type_name:
+                enabled_countries.append('singapore')
+            elif 'Indonesia' in holiday_type_name:
+                enabled_countries.append('indonesia')
+            elif 'China' in holiday_type_name:
+                enabled_countries.append('china')
+            elif 'Korea' in holiday_type_name:
+                enabled_countries.append('korea')
+            elif 'Japan' in holiday_type_name:
+                enabled_countries.append('japan')
+        elif not is_school_page and 'Public' in holiday_type_name:
+            # Extract country name from public holiday type
+            if 'Malaysia' in holiday_type_name:
+                enabled_countries.append('malaysia')
+            elif 'Singapore' in holiday_type_name:
+                enabled_countries.append('singapore')
+            elif 'Indonesia' in holiday_type_name:
+                enabled_countries.append('indonesia')
+            elif 'China' in holiday_type_name:
+                enabled_countries.append('china')
+            elif 'Korea' in holiday_type_name:
+                enabled_countries.append('korea')
+            elif 'Japan' in holiday_type_name:
+                enabled_countries.append('japan')
+
+    print(f"DEBUG: Enabled countries for {'school' if is_school_page else 'public'}: {enabled_countries}")
+
+    return jsonify({
+        'success': True,
+        'enabled_countries': list(set(enabled_countries))  # Remove duplicates
+    })

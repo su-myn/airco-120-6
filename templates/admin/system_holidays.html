@@ -2,23 +2,313 @@
 
 {% block title %}Manage System Holidays - Admin{% endblock %}
 
+{% block additional_styles %}
+<style>
+    .holiday-form-container {
+        display: flex;
+        gap: 20px;
+        margin-top: 30px;
+    }
+
+    .add-holiday-form {
+        flex: 1;
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    .holidays-display {
+        flex: 2;
+    }
+
+    .import-section {
+        background: #e8f5e8;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+        border: 2px dashed #4CAF50;
+    }
+
+    .import-section h4 {
+        margin-top: 0;
+        color: #2e7d32;
+    }
+
+    .file-input-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .file-input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #4CAF50;
+        border-radius: 4px;
+    }
+
+    .upload-btn {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .upload-btn:hover {
+        background-color: #45a049;
+    }
+
+    .csv-template-link {
+        display: inline-block;
+        margin-top: 10px;
+        color: #2e7d32;
+        text-decoration: none;
+        font-size: 0.9em;
+    }
+
+    .csv-template-link:hover {
+        text-decoration: underline;
+    }
+
+    .holiday-table {
+        margin-top: 20px;
+    }
+
+    .country-flag {
+        font-size: 1.2em;
+        margin-right: 5px;
+    }
+
+    /* Country table styling */
+    .country-table {
+        margin-bottom: 30px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .country-header {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+        padding: 15px 20px;
+        font-size: 1.2em;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.3s ease;
+    }
+
+    .country-header:hover {
+        background: linear-gradient(135deg, #45a049, #4CAF50);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+    }
+
+    .school-holiday .country-header {
+        background: linear-gradient(135deg, #2196F3, #1976D2);
+    }
+
+    .school-holiday .country-header:hover {
+        background: linear-gradient(135deg, #1976D2, #2196F3);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+    }
+
+    .country-header-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex: 1;
+    }
+
+    .expand-icon {
+        font-size: 1.2em;
+        transition: transform 0.3s ease;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .expand-icon:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .expand-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+    .table-container {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, opacity 0.3s ease;
+        opacity: 0;
+    }
+
+    .table-container.expanded {
+        max-height: 2000px; /* Large enough to accommodate most tables */
+        opacity: 1;
+    }
+
+    .country-stats {
+        font-size: 0.9em;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .bulk-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .bulk-select-all {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+    }
+
+    .bulk-select-all:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .bulk-delete-btn {
+        background: #dc3545;
+        border: 1px solid #dc3545;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        display: none;
+    }
+
+    .bulk-delete-btn:hover {
+        background: #c82333;
+    }
+
+    .bulk-delete-btn.show {
+        display: inline-block;
+    }
+
+    .country-table table {
+        width: 100%;
+        margin: 0;
+    }
+
+    .country-table .admin-table thead tr {
+        background-color: #f8f9fa;
+    }
+
+    .country-table .admin-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .checkbox-column {
+        width: 40px;
+        text-align: center;
+    }
+
+    .holiday-checkbox {
+        cursor: pointer;
+    }
+
+    .no-holidays {
+        padding: 20px;
+        text-align: center;
+        color: #666;
+        font-style: italic;
+    }
+
+    .sortable {
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+    }
+
+    .sortable:hover {
+        background-color: #e9ecef !important;
+    }
+
+    .sortable::after {
+        content: ' ↕';
+        color: #999;
+        font-size: 0.8em;
+    }
+
+    .sortable.sort-asc::after {
+        content: ' ↑';
+        color: #007bff;
+    }
+
+    .sortable.sort-desc::after {
+        content: ' ↓';
+        color: #007bff;
+    }
+
+    /* Selection count display */
+    .selection-info {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.9em;
+        margin-left: 10px;
+    }
+
+    /* Row highlighting when selected */
+    .selected-row {
+        background-color: #fff3cd !important;
+    }
+
+    .selected-row:hover {
+        background-color: #ffeaa7 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="admin-card">
     <h2>Manage System-wide Holidays</h2>
     <p>These holidays will be visible to all companies by default, although individual companies can customize their views.</p>
 
-    <div style="display: flex; gap: 20px; margin-top: 30px;">
+    <div class="holiday-form-container">
         <!-- Form to add new system holiday -->
-        <div style="flex: 1; background: #f5f5f5; padding: 20px; border-radius: 8px;">
+        <div class="add-holiday-form">
             <h3>Add System-wide Holiday</h3>
             <form method="post" action="{{ url_for('admin.add_system_holiday') }}">
                 <div class="form-group">
                     <label for="holiday_type_id">Holiday Type:</label>
                     <select id="holiday_type_id" name="holiday_type_id" required>
+                        <option value="">Select Holiday Type</option>
                         {% for type in holiday_types %}
-                        {% if type.name in ["Malaysia Public Holiday", "Malaysia School Holiday"] %}
-                        <option value="{{ type.id }}">{{ type.name }}</option>
-                        {% endif %}
+                        <option value="{{ type.id }}">
+                            {% if 'Malaysia' in type.name %}🇲🇾{% endif %}
+                            {% if 'Singapore' in type.name %}🇸🇬{% endif %}
+                            {% if 'Indonesia' in type.name %}🇮🇩{% endif %}
+                            {% if 'China' in type.name %}🇨🇳{% endif %}
+                            {% if 'Korea' in type.name %}🇰🇷{% endif %}
+                            {% if 'Japan' in type.name %}🇯🇵{% endif %}
+                            {{ type.name }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -34,6 +324,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="states">States/Regions (optional):</label>
+                    <input type="text" id="states" name="states" placeholder="e.g., Kuala Lumpur, Selangor">
+                </div>
+
+                <div class="form-group">
                     <label>
                         <input type="checkbox" name="is_recurring"> Recurring (Annual Holiday)
                     </label>
@@ -41,70 +336,440 @@
 
                 <button type="submit" class="admin-btn">Add System Holiday</button>
             </form>
+
+            <!-- Import CSV Section with Holiday Type Selection -->
+            <div class="import-section">
+                <h4>📁 Import Holidays from CSV</h4>
+                <p>Upload a CSV file to bulk import holidays</p>
+                <form method="post" action="{{ url_for('admin.import_holidays') }}" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="csv_holiday_type_id">Holiday Type for Import:</label>
+                        <select id="csv_holiday_type_id" name="holiday_type_id" required>
+                            <option value="">Select Holiday Type</option>
+                            {% for type in holiday_types %}
+                            <option value="{{ type.id }}">
+                                {% if 'Malaysia' in type.name %}🇲🇾{% endif %}
+                                {% if 'Singapore' in type.name %}🇸🇬{% endif %}
+                                {% if 'Indonesia' in type.name %}🇮🇩{% endif %}
+                                {% if 'China' in type.name %}🇨🇳{% endif %}
+                                {% if 'Korea' in type.name %}🇰🇷{% endif %}
+                                {% if 'Japan' in type.name %}🇯🇵{% endif %}
+                                {{ type.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="file-input-container">
+                        <input type="file" name="csv_file" accept=".csv" class="file-input" required>
+                        <button type="submit" class="upload-btn">Upload CSV</button>
+                    </div>
+                </form>
+                <a href="#" onclick="downloadTemplate()" class="csv-template-link">📥 Download CSV Template</a>
+            </div>
         </div>
 
-        <!-- Display existing public holidays -->
-        <div style="flex: 1;">
+        <!-- Display existing holidays grouped by country -->
+        <div class="holidays-display">
             <h3>Existing Public Holidays</h3>
-            {% if public_holidays %}
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Name</th>
-                        <th>Recurring</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for holiday in public_holidays %}
-                    <tr>
-                        <td>{{ holiday.date.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ holiday.name }}</td>
-                        <td>{{ "Yes" if holiday.is_recurring else "No" }}</td>
-                        <td>
-                            <form method="post" action="{{ url_for('admin.delete_system_holiday', id=holiday.id) }}" style="display: inline;">
-                                <button type="submit" class="admin-btn secondary" onclick="return confirm('Are you sure you want to delete this system holiday?')">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No public holidays defined yet.</p>
+
+            <!-- Group public holidays by country -->
+            {% set public_countries = {} %}
+            {% for holiday in public_holidays %}
+                {% set country = 'Malaysia' if 'Malaysia' in holiday.holiday_type.name
+                            else 'Singapore' if 'Singapore' in holiday.holiday_type.name
+                            else 'Indonesia' if 'Indonesia' in holiday.holiday_type.name
+                            else 'China' if 'China' in holiday.holiday_type.name
+                            else 'Korea' if 'Korea' in holiday.holiday_type.name
+                            else 'Japan' if 'Japan' in holiday.holiday_type.name
+                            else 'Other' %}
+                {% if country not in public_countries %}
+                    {% set _ = public_countries.update({country: []}) %}
+                {% endif %}
+                {% set _ = public_countries[country].append(holiday) %}
+            {% endfor %}
+
+            {% for country, holidays in public_countries.items() %}
+            <div class="country-table" id="public-country-{{ country|lower }}">
+                <div class="country-header" onclick="toggleCountryTable('public-country-{{ country|lower }}')">
+                    <div class="country-header-content">
+                        <div class="expand-icon" id="expand-icon-public-{{ country|lower }}">▼</div>
+                        <span>
+                            {% if country == 'Malaysia' %}🇲🇾{% endif %}
+                            {% if country == 'Singapore' %}🇸🇬{% endif %}
+                            {% if country == 'Indonesia' %}🇮🇩{% endif %}
+                            {% if country == 'China' %}🇨🇳{% endif %}
+                            {% if country == 'Korea' %}🇰🇷{% endif %}
+                            {% if country == 'Japan' %}🇯🇵{% endif %}
+                            {{ country }} Public Holidays
+                        </span>
+                        <div class="country-stats">
+                            <span>{{ holidays|length }} holidays</span>
+                        </div>
+                    </div>
+                    <div class="bulk-actions" onclick="event.stopPropagation()">
+                        <span class="selection-info" id="selection-info-public-{{ country|lower }}">0 selected</span>
+                        <button type="button" class="bulk-select-all" onclick="toggleSelectAll('public-table-{{ country|lower }}')">
+                            Select All
+                        </button>
+                        <button type="button" class="bulk-delete-btn" id="bulk-delete-public-{{ country|lower }}"
+                                onclick="bulkDeleteHolidays('public-table-{{ country|lower }}')">
+                            Delete Selected
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container" id="table-container-public-{{ country|lower }}">
+                    <table class="admin-table" id="public-table-{{ country|lower }}">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-column">
+                                    <input type="checkbox" onchange="updateBulkActions('public-table-{{ country|lower }}')"
+                                           class="master-checkbox">
+                                </th>
+                                <th class="sortable" onclick="sortTable('public-table-{{ country|lower }}', 1, 'date')">Date</th>
+                                <th class="sortable" onclick="sortTable('public-table-{{ country|lower }}', 2)">Day</th>
+                                <th class="sortable" onclick="sortTable('public-table-{{ country|lower }}', 3)">Name</th>
+                                <th class="sortable" onclick="sortTable('public-table-{{ country|lower }}', 4)">States</th>
+                                <th class="sortable" onclick="sortTable('public-table-{{ country|lower }}', 5)">Active</th>
+                                <th class="sortable" onclick="sortTable('public-table-{{ country|lower }}', 6)">Recurring</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for holiday in holidays|sort(attribute='date') %}
+                            <tr>
+                                <td class="checkbox-column">
+                                    <input type="checkbox" class="holiday-checkbox" value="{{ holiday.id }}"
+                                           onchange="updateBulkActions('public-table-{{ country|lower }}')">
+                                </td>
+                                <td>{{ holiday.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ holiday.day_of_week or holiday.date.strftime('%A') }}</td>
+                                <td>{{ holiday.name }}</td>
+                                <td>{{ holiday.states or '-' }}</td>
+                                <td>
+                                    <span style="color: {{ '#4CAF50' if holiday.is_active else '#F44336' }};">
+                                        {{ "Yes" if holiday.is_active else "No" }}
+                                    </span>
+                                </td>
+                                <td>{{ "Yes" if holiday.is_recurring else "No" }}</td>
+                                <td>
+                                    <form method="post" action="{{ url_for('admin.delete_system_holiday', id=holiday.id) }}" style="display: inline;">
+                                        <button type="submit" class="admin-btn secondary" onclick="return confirm('Are you sure you want to delete this system holiday?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not public_holidays %}
+            <div class="no-holidays">No public holidays defined yet.</div>
             {% endif %}
 
-            <h3 style="margin-top: 30px;">Existing School Holidays</h3>
-            {% if school_holidays %}
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Name</th>
-                        <th>Recurring</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for holiday in school_holidays %}
-                    <tr>
-                        <td>{{ holiday.date.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ holiday.name }}</td>
-                        <td>{{ "Yes" if holiday.is_recurring else "No" }}</td>
-                        <td>
-                            <form method="post" action="{{ url_for('admin.delete_system_holiday', id=holiday.id) }}" style="display: inline;">
-                                <button type="submit" class="admin-btn secondary" onclick="return confirm('Are you sure you want to delete this system holiday?')">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No school holidays defined yet.</p>
+            <h3 style="margin-top: 40px;">Existing School Holidays</h3>
+
+            <!-- Group school holidays by country -->
+            {% set school_countries = {} %}
+            {% for holiday in school_holidays %}
+                {% set country = 'Malaysia' if 'Malaysia' in holiday.holiday_type.name
+                            else 'Singapore' if 'Singapore' in holiday.holiday_type.name
+                            else 'Indonesia' if 'Indonesia' in holiday.holiday_type.name
+                            else 'China' if 'China' in holiday.holiday_type.name
+                            else 'Korea' if 'Korea' in holiday.holiday_type.name
+                            else 'Japan' if 'Japan' in holiday.holiday_type.name
+                            else 'Other' %}
+                {% if country not in school_countries %}
+                    {% set _ = school_countries.update({country: []}) %}
+                {% endif %}
+                {% set _ = school_countries[country].append(holiday) %}
+            {% endfor %}
+
+            {% for country, holidays in school_countries.items() %}
+            <div class="country-table school-holiday" id="school-country-{{ country|lower }}">
+                <div class="country-header" onclick="toggleCountryTable('school-country-{{ country|lower }}')">
+                    <div class="country-header-content">
+                        <div class="expand-icon" id="expand-icon-school-{{ country|lower }}">▼</div>
+                        <span>
+                            {% if country == 'Malaysia' %}🇲🇾{% endif %}
+                            {% if country == 'Singapore' %}🇸🇬{% endif %}
+                            {% if country == 'Indonesia' %}🇮🇩{% endif %}
+                            {% if country == 'China' %}🇨🇳{% endif %}
+                            {% if country == 'Korea' %}🇰🇷{% endif %}
+                            {% if country == 'Japan' %}🇯🇵{% endif %}
+                            {{ country }} School Holidays
+                        </span>
+                        <div class="country-stats">
+                            <span>{{ holidays|length }} holidays</span>
+                        </div>
+                    </div>
+                    <div class="bulk-actions" onclick="event.stopPropagation()">
+                        <span class="selection-info" id="selection-info-school-{{ country|lower }}">0 selected</span>
+                        <button type="button" class="bulk-select-all" onclick="toggleSelectAll('school-table-{{ country|lower }}')">
+                            Select All
+                        </button>
+                        <button type="button" class="bulk-delete-btn" id="bulk-delete-school-{{ country|lower }}"
+                                onclick="bulkDeleteHolidays('school-table-{{ country|lower }}')">
+                            Delete Selected
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container" id="table-container-school-{{ country|lower }}">
+                    <table class="admin-table" id="school-table-{{ country|lower }}">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-column">
+                                    <input type="checkbox" onchange="updateBulkActions('school-table-{{ country|lower }}')"
+                                           class="master-checkbox">
+                                </th>
+                                <th class="sortable" onclick="sortTable('school-table-{{ country|lower }}', 1, 'date')">Date</th>
+                                <th class="sortable" onclick="sortTable('school-table-{{ country|lower }}', 2)">Day</th>
+                                <th class="sortable" onclick="sortTable('school-table-{{ country|lower }}', 3)">Name</th>
+                                <th class="sortable" onclick="sortTable('school-table-{{ country|lower }}', 4)">States</th>
+                                <th class="sortable" onclick="sortTable('school-table-{{ country|lower }}', 5)">Active</th>
+                                <th class="sortable" onclick="sortTable('school-table-{{ country|lower }}', 6)">Recurring</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for holiday in holidays|sort(attribute='date') %}
+                            <tr>
+                                <td class="checkbox-column">
+                                    <input type="checkbox" class="holiday-checkbox" value="{{ holiday.id }}"
+                                           onchange="updateBulkActions('school-table-{{ country|lower }}')">
+                                </td>
+                                <td>{{ holiday.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ holiday.day_of_week or holiday.date.strftime('%A') }}</td>
+                                <td>{{ holiday.name }}</td>
+                                <td>{{ holiday.states or '-' }}</td>
+                                <td>
+                                    <span style="color: {{ '#2196F3' if holiday.is_active else '#F44336' }};">
+                                        {{ "Yes" if holiday.is_active else "No" }}
+                                    </span>
+                                </td>
+                                <td>{{ "Yes" if holiday.is_recurring else "No" }}</td>
+                                <td>
+                                    <form method="post" action="{{ url_for('admin.delete_system_holiday', id=holiday.id) }}" style="display: inline;">
+                                        <button type="submit" class="admin-btn secondary" onclick="return confirm('Are you sure you want to delete this system holiday?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not school_holidays %}
+            <div class="no-holidays">No school holidays defined yet.</div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+function downloadTemplate() {
+    // Create CSV template content
+    const csvContent = [
+        ['Date', 'Day', 'Name', 'States', 'Recurring'],
+        ['2024-01-01', 'Monday', 'New Year Day', 'All States', 'true'],
+        ['2024-02-10', 'Saturday', 'Chinese New Year', 'All States', 'false'],
+        ['2024-03-28', 'Thursday', 'Good Friday', 'Sabah, Sarawak', 'true']
+    ].map(row => row.join(',')).join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'holiday_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// Expand/Collapse functionality
+function toggleCountryTable(countryTableId) {
+    const countryTable = document.getElementById(countryTableId);
+    const tableContainer = countryTable.querySelector('.table-container');
+    const expandIcon = countryTable.querySelector('.expand-icon');
+
+    const isExpanded = tableContainer.classList.contains('expanded');
+
+    if (isExpanded) {
+        // Collapse
+        tableContainer.classList.remove('expanded');
+        expandIcon.classList.remove('expanded');
+    } else {
+        // Expand
+        tableContainer.classList.add('expanded');
+        expandIcon.classList.add('expanded');
+    }
+}
+
+// Bulk selection functionality
+function toggleSelectAll(tableId) {
+    const table = document.getElementById(tableId);
+    const masterCheckbox = table.querySelector('.master-checkbox');
+    const checkboxes = table.querySelectorAll('.holiday-checkbox');
+
+    const shouldSelectAll = !masterCheckbox.checked;
+
+    masterCheckbox.checked = shouldSelectAll;
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = shouldSelectAll;
+        // Update row highlighting
+        const row = checkbox.closest('tr');
+        if (shouldSelectAll) {
+            row.classList.add('selected-row');
+        } else {
+            row.classList.remove('selected-row');
+        }
+    });
+
+    updateBulkActions(tableId);
+}
+
+function updateBulkActions(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    const masterCheckbox = table.querySelector('.master-checkbox');
+    const checkboxes = table.querySelectorAll('.holiday-checkbox');
+    const checkedBoxes = table.querySelectorAll('.holiday-checkbox:checked');
+
+    // Update master checkbox state
+    if (checkedBoxes.length === 0) {
+        masterCheckbox.checked = false;
+        masterCheckbox.indeterminate = false;
+    } else if (checkedBoxes.length === checkboxes.length) {
+        masterCheckbox.checked = true;
+        masterCheckbox.indeterminate = false;
+    } else {
+        masterCheckbox.checked = false;
+        masterCheckbox.indeterminate = true;
+    }
+
+    // Update row highlighting
+    checkboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        if (checkbox.checked) {
+            row.classList.add('selected-row');
+        } else {
+            row.classList.remove('selected-row');
+        }
+    });
+
+    // Update selection info and show/hide bulk delete button
+    const countryType = tableId.includes('school') ? 'school' : 'public';
+    const country = tableId.split('-').pop();
+    const selectionInfo = document.getElementById(`selection-info-${countryType}-${country}`);
+    const bulkDeleteBtn = document.getElementById(`bulk-delete-${countryType}-${country}`);
+
+    if (selectionInfo) {
+        selectionInfo.textContent = `${checkedBoxes.length} selected`;
+    }
+
+    if (bulkDeleteBtn) {
+        if (checkedBoxes.length > 0) {
+            bulkDeleteBtn.classList.add('show');
+        } else {
+            bulkDeleteBtn.classList.remove('show');
+        }
+    }
+}
+
+function bulkDeleteHolidays(tableId) {
+    const table = document.getElementById(tableId);
+    const checkedBoxes = table.querySelectorAll('.holiday-checkbox:checked');
+
+    if (checkedBoxes.length === 0) {
+        alert('Please select holidays to delete.');
+        return;
+    }
+
+    const holidayIds = Array.from(checkedBoxes).map(cb => cb.value);
+    const confirmMessage = `Are you sure you want to delete ${holidayIds.length} selected holiday(s)? This action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    // Create a form and submit it
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/admin/bulk_delete_holidays';
+
+    // Add CSRF token if you're using one
+    // const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    // if (csrfToken) {
+    //     const csrfInput = document.createElement('input');
+    //     csrfInput.type = 'hidden';
+    //     csrfInput.name = 'csrf_token';
+    //     csrfInput.value = csrfToken.getAttribute('content');
+    //     form.appendChild(csrfInput);
+    // }
+
+    // Add holiday IDs
+    holidayIds.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'holiday_ids';
+        input.value = id;
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Add table sorting functionality
+function sortTable(tableId, columnIndex, dataType = 'text') {
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    // Determine sort direction
+    const currentSort = table.dataset.sortColumn;
+    const currentDir = table.dataset.sortDirection || 'asc';
+    const newDir = (currentSort == columnIndex && currentDir === 'asc') ? 'desc' : 'asc';
+
+    // Sort rows
+    rows.sort((a, b) => {
+        let aVal = a.cells[columnIndex].textContent.trim();
+        let bVal = b.cells[columnIndex].textContent.trim();
+
+        if (dataType === 'date') {
+            aVal = new Date(aVal);
+            bVal = new Date(bVal);
+        }
+
+        if (newDir === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+
+    // Update table
+    rows.forEach(row => tbody.appendChild(row));
+
+    // Update sort indicators
+    table.dataset.sortColumn = columnIndex;
+    table.dataset.sortDirection = newDir;
+
+    // Update header styles
+    table.querySelectorAll('th').forEach((th, i) => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (i === columnIndex) {
+            th.classList.add(`sort-${newDir}`);
+        }
+    });
+}
+</script>
+
 {% endblock %}

@@ -156,48 +156,57 @@
             margin: 0 auto;
         }
 
-        /* Company stats cards */
-        .company-card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 15px;
-            margin-bottom: 20px;
+        /* Form styles */
+        .form-group {
+            margin-bottom: 15px;
         }
 
-        .company-card h3 {
-            margin-top: 0;
-            color: #ee4d2d;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        .company-stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .company-stat {
-            background-color: #f5f5f5;
-            padding: 10px;
-            border-radius: 5px;
-            flex: 1;
-            min-width: 100px;
-            text-align: center;
-        }
-
-        .company-stat p {
-            margin: 0;
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        .company-stat strong {
-            font-size: 1.5rem;
-            color: #333;
+        .form-group label {
             display: block;
             margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* Flash messages */
+        .flash-messages {
+            margin: 20px 0;
+        }
+
+        .flash-message {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .flash-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .flash-danger, .flash-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .flash-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .flash-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
 
         /* Mobile responsive */
@@ -256,25 +265,24 @@
 </head>
 <body>
     <div class="admin-sidebar" id="adminSidebar">
-        <a href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
 
-        <div class="sidebar-section">User Management</div>
-        <a href="{{ url_for('admin.admin_users') }}">Manage Users</a>
-        <a href="{{ url_for('admin.admin_companies') }}">Manage Companies</a>
-        <a href="{{ url_for('admin.admin_roles') }}">Manage Roles</a>
+            <div class="sidebar-section">User Management</div>
+            <a href="{{ url_for('admin.admin_users') }}">Manage Users</a>
+            <a href="{{ url_for('admin.admin_companies') }}">Manage Companies</a>
+            <a href="{{ url_for('admin.admin_roles') }}">Manage Roles</a>
 
-        <div class="sidebar-section">Data Management</div>
-        <a href="{{ url_for('admin.admin_units') }}">Manage Units</a>
-        <a href="{{ url_for('admin.data_management') }}">📊 Import/Export Data</a>
+            <div class="sidebar-section">Data Management</div>
+            <a href="{{ url_for('admin.admin_units') }}">Manage Units</a>
+            <a href="{{ url_for('admin.data_management') }}">Data Import/Export</a>
 
-        <div class="sidebar-section">Holiday Management</div>
-        <a href="{{ url_for('admin.admin_holidays') }}">Manage Holidays</a>
-        <a href="{{ url_for('admin.system_holidays') }}">System Holidays</a>
+            <div class="sidebar-section">Holiday Management</div>
+            <a href="{{ url_for('admin.admin_holidays') }}">System Holidays</a>
 
-        <div class="sidebar-section">Navigation</div>
-        <a href="{{ url_for('dashboard.dashboard') }}">Back to Site</a>
-        <a href="{{ url_for('auth.logout') }}">Logout</a>
-    </div>
+            <div class="sidebar-section">Navigation</div>
+            <a href="{{ url_for('dashboard.dashboard') }}">Back to Site</a>
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
 
     <div class="admin-content">
         <header class="admin-header">

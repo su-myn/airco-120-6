@@ -35,7 +35,6 @@
         margin-bottom: 20px;
     }
 
-    /* Rest of your existing styles... */
     .tab-nav {
         display: flex;
         border-bottom: 1px solid #ddd;
@@ -107,6 +106,7 @@
         border: 1px solid #ddd;
         border-radius: 4px;
         background-color: white;
+        color: black;
     }
 
     .add-btn {
@@ -176,8 +176,9 @@
         color: #4CAF50;
     }
 
+    /* FIXED: School holiday section styling */
     .school-holiday-section .existing-holidays h3 {
-        color: #2196F3;
+        color: #2196F3 !important;
     }
 
     .school-holiday-section .add-holiday-form {
@@ -199,6 +200,192 @@
         padding: 10px 15px;
         border-radius: 4px;
         margin-bottom: 20px;
+    }
+
+    /* Country buttons styling */
+    .country-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .country-btn {
+        position: relative;
+        background-color: #f5f5f5;
+        color: #666;
+        border: 2px solid #ddd;
+        padding: 12px 16px 12px 50px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: left;
+        transition: all 0.3s ease;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .country-btn::before {
+        content: "●";
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 16px;
+        color: #ccc;
+        transition: all 0.3s ease;
+    }
+
+    .country-btn::after {
+        content: "DISABLED";
+        font-size: 11px;
+        font-weight: bold;
+        color: #999;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background-color: #e0e0e0;
+        transition: all 0.3s ease;
+    }
+
+    .country-btn:hover {
+        border-color: #4CAF50;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .country-btn.active {
+        background-color: #e8f5e8;
+        color: #2e7d32;
+        border: 2px solid #4CAF50;
+        box-shadow: 0 2px 12px rgba(76, 175, 80, 0.2);
+    }
+
+    .country-btn.active::before {
+        color: #4CAF50;
+        content: "●";
+        animation: pulse 2s infinite;
+    }
+
+    .country-btn.active::after {
+        content: "ENABLED";
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .country-btn.active:hover {
+        background-color: #d7f0d7;
+        border-color: #45a049;
+        transform: translateY(-1px);
+    }
+
+    @keyframes pulse {
+        0% { transform: translateY(-50%) scale(1); }
+        50% { transform: translateY(-50%) scale(1.1); }
+        100% { transform: translateY(-50%) scale(1); }
+    }
+
+    /* Country holiday tables */
+    .country-holidays {
+        margin-top: 20px;
+    }
+
+    .country-holiday-table {
+        background-color: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 2px solid #e0e0e0;
+    }
+
+    .country-holiday-table h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #4CAF50;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* FIXED: Make country holiday table headers blue for school holidays */
+    .school-holiday-section .country-holiday-table h4 {
+        color: #2196F3 !important;
+    }
+
+    .holiday-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+
+    .holiday-table th,
+    .holiday-table td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .holiday-table th {
+        background-color: #f5f5f5;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .holiday-table tr:hover {
+        background-color: #f9f9f9;
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.3s;
+        border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+        background-color: #4CAF50;
+    }
+
+    input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+    }
+
+    /* Loading state */
+    .loading-holidays {
+        text-align: center;
+        padding: 20px;
+        color: #666;
     }
 </style>
 {% endblock %}
@@ -223,8 +410,57 @@
     </div>
 
     <div class="holiday-section {% if holiday_type == 'public' %}public-holiday-section{% elif holiday_type == 'school' %}school-holiday-section{% else %}custom-holiday-section{% endif %}">
+        {% if holiday_type == 'public' %}
         <div class="add-holiday-form">
-            <h3>Add {% if holiday_type == 'public' %}Public Holiday{% elif holiday_type == 'school' %}School Holiday{% else %}Custom Day{% endif %}</h3>
+            <h3>Add Public Holiday Calendar</h3>
+            <div class="country-buttons">
+                <button class="country-btn" data-country="malaysia">
+                    🇲🇾 Malaysia
+                </button>
+                <button class="country-btn" data-country="singapore">
+                    🇸🇬 Singapore
+                </button>
+                <button class="country-btn" data-country="indonesia">
+                    🇮🇩 Indonesia
+                </button>
+                <button class="country-btn" data-country="korea">
+                    🇰🇷 Korea
+                </button>
+                <button class="country-btn" data-country="china">
+                    🇨🇳 China
+                </button>
+                <button class="country-btn" data-country="japan">
+                    🇯🇵 Japan
+                </button>
+            </div>
+        </div>
+        {% elif holiday_type == 'school' %}
+        <div class="add-holiday-form">
+            <h3>Add School Holiday Calendar</h3>
+            <div class="country-buttons">
+                <button class="country-btn" data-country="malaysia">
+                    🇲🇾 Malaysia
+                </button>
+                <button class="country-btn" data-country="singapore">
+                    🇸🇬 Singapore
+                </button>
+                <button class="country-btn" data-country="indonesia">
+                    🇮🇩 Indonesia
+                </button>
+                <button class="country-btn" data-country="korea">
+                    🇰🇷 Korea
+                </button>
+                <button class="country-btn" data-country="china">
+                    🇨🇳 China
+                </button>
+                <button class="country-btn" data-country="japan">
+                    🇯🇵 Japan
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <div class="add-holiday-form">
+            <h3>Add Custom Day</h3>
             <form method="post" action="{{ url_for('occupancy.add_holiday') }}">
                 <input type="hidden" name="holiday_type" value="{{ holiday_type }}">
 
@@ -234,17 +470,28 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="name">{% if holiday_type == 'custom' %}Custom Day Name{% else %}Holiday Name{% endif %}</label>
-                    <input type="text" id="name" name="name" placeholder="e.g. {% if holiday_type == 'public' %}Labor Day{% elif holiday_type == 'school' %}Term Break{% else %}UM Convocation{% endif %}" required>
+                    <label for="name">Custom Day Name</label>
+                    <input type="text" id="name" name="name" placeholder="e.g. UM Convocation" required>
                 </div>
 
-                <button type="submit" class="add-btn">Add {% if holiday_type == 'custom' %}Custom Day{% else %}Holiday{% endif %}</button>
+                <button type="submit" class="add-btn">Add Custom Day</button>
             </form>
         </div>
+        {% endif %}
 
         <div class="existing-holidays">
             <h3>Existing {% if holiday_type == 'public' %}Public Holidays{% elif holiday_type == 'school' %}School Holidays{% else %}Custom Days{% endif %}</h3>
 
+            {% if holiday_type == 'public' or holiday_type == 'school' %}
+
+            <!-- Country Holiday Tables will be dynamically inserted here -->
+            <div class="country-holidays" id="country-holidays">
+                <div class="loading-holidays">
+                    Select a country calendar to view holidays
+                </div>
+            </div>
+
+            {% else %}
             {% if holidays %}
             <ul class="holiday-list">
                 {% for holiday in holidays %}
@@ -260,9 +507,217 @@
                 {% endfor %}
             </ul>
             {% else %}
-            <p>No {% if holiday_type == 'public' %}public holidays{% elif holiday_type == 'school' %}school holidays{% else %}custom days{% endif %} added yet.</p>
+            <p>No custom days added yet.</p>
+            {% endif %}
             {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+// Country button toggle functionality and holiday management
+document.addEventListener('DOMContentLoaded', function() {
+    const countryButtons = document.querySelectorAll('.country-btn');
+    const countryHolidaysContainer = document.getElementById('country-holidays');
+    let activeCountries = new Set();
+
+    // Check if container exists before proceeding
+    if (!countryHolidaysContainer) {
+        console.log('No country-holidays container found, skipping holiday management setup');
+        return;
+    }
+
+    // Load existing preferences
+    loadCountryPreferences();
+
+    countryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const country = this.dataset.country;
+            const isCurrentlyActive = this.classList.contains('active');
+
+            if (isCurrentlyActive) {
+                // Disable country
+                this.classList.remove('active');
+                activeCountries.delete(country);
+                removeCountryTable(country);
+                toggleCountryCalendar(country, false);
+            } else {
+                // Enable country
+                this.classList.add('active');
+                activeCountries.add(country);
+                const currentHolidayType = window.location.search.includes('type=school') ? 'school' : 'public';
+                loadCountryHolidays(country, currentHolidayType);
+                toggleCountryCalendar(country, true);
+            }
+        });
+    });
+
+    function loadCountryPreferences() {
+            fetch('/get_company_holiday_preferences')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // FIXED: Check which page we're on to determine which countries to enable
+                        const currentHolidayType = window.location.search.includes('type=school') ? 'school' : 'public';
+
+                        // FIXED: Filter enabled countries based on the current page type
+                        const relevantCountries = data.enabled_countries.filter(country => {
+                            // This is a simple approach - you might need to adjust based on your data structure
+                            return true; // For now, show all enabled countries
+                        });
+
+                        data.enabled_countries.forEach(country => {
+                            const button = document.querySelector(`[data-country="${country}"]`);
+                            if (button) {
+                                button.classList.add('active');
+                                activeCountries.add(country);
+                                loadCountryHolidays(country, currentHolidayType);
+                            }
+                        });
+
+                        if (activeCountries.size === 0 && countryHolidaysContainer) {
+                            countryHolidaysContainer.innerHTML = '<div class="loading-holidays">Select a country calendar to view holidays</div>';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading preferences:', error);
+                });
+        }
+
+    function toggleCountryCalendar(country, enabled) {
+        fetch('/toggle_country_calendar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                country: country,
+                enabled: enabled
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Error toggling calendar:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function loadCountryHolidays(country, holidayType = 'public') {
+        fetch(`/get_country_holidays/${country}/${holidayType}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayCountryHolidays(country, data.holidays, data.flag);
+                } else {
+                    console.error('Error loading holidays:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    function displayCountryHolidays(country, holidays, flag) {
+        // Check if container exists
+        if (!countryHolidaysContainer) {
+            console.error('Country holidays container not found');
+            return;
+        }
+
+        // Remove loading message if it's the first table
+        if (activeCountries.size === 1) {
+            countryHolidaysContainer.innerHTML = '';
+        }
+
+        const tableId = `table-${country}`;
+
+        // Remove existing table for this country
+        const existingTable = document.getElementById(tableId);
+        if (existingTable) {
+            existingTable.remove();
+        }
+
+        // FIXED: Determine holiday type from URL
+        const currentHolidayType = window.location.search.includes('type=school') ? 'School' : 'Public';
+
+        const tableHtml = `
+            <div class="country-holiday-table" id="${tableId}">
+                <h4>${flag} ${country.charAt(0).toUpperCase() + country.slice(1)} ${currentHolidayType} Holidays</h4>
+                <table class="holiday-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th>Name</th>
+                            <th>States</th>
+                            <th>Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${holidays.map(holiday => `
+                            <tr>
+                                <td>${holiday.date}</td>
+                                <td>${holiday.day_of_week || new Date(holiday.date).toLocaleDateString('en-US', { weekday: 'long' })}</td>
+                                <td>${holiday.name}</td>
+                                <td>${holiday.states || '-'}</td>
+                                <td>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" ${holiday.active ? 'checked' : ''}
+                                               onchange="toggleHolidayDate(${holiday.id}, this.checked)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        countryHolidaysContainer.insertAdjacentHTML('beforeend', tableHtml);
+    }
+
+    function removeCountryTable(country) {
+        const tableId = `table-${country}`;
+        const table = document.getElementById(tableId);
+        if (table) {
+            table.remove();
+        }
+
+        // Show loading message if no countries are active
+        if (activeCountries.size === 0 && countryHolidaysContainer) {
+            countryHolidaysContainer.innerHTML = '<div class="loading-holidays">Select a country calendar to view holidays</div>';
+        }
+    }
+
+    // Make toggleHolidayDate globally available
+    window.toggleHolidayDate = function(holidayId, enabled) {
+        fetch('/toggle_holiday_date', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                holiday_id: holidayId,
+                enabled: enabled
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Error toggling holiday:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    };
+});
+</script>
+
 {% endblock %}

@@ -1,8 +1,17 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, User, Company, Role, Unit, Issue, Holiday, HolidayType, BookingForm, Category, ReportedBy, Priority, Status, Type, IssueItem, Contact, ExpenseData
+from models import db, User, Company, Role, Unit, Issue, Holiday, HolidayType, BookingForm, Category, ReportedBy, Priority, Status, Type, IssueItem, Contact, ExpenseData, CompanyHolidayOverride
+import csv
+import io
+from datetime import datetime, date
+from werkzeug.utils import secure_filename
 
+
+from datetime import datetime
+import csv
+import io
+from functools import wraps
 
 from app import bcrypt
 import csv
@@ -19,10 +28,9 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin:
-            flash('You do not have permission to access this page.', 'danger')
+            flash('You do not have permission to access the admin panel.', 'danger')
             return redirect(url_for('dashboard.dashboard'))
         return f(*args, **kwargs)
-
     return decorated_function
 
 @admin_bp.route('/')
@@ -545,13 +553,379 @@ def admin_delete_role(id):
 
 # Holiday management routes for admin.py
 
-@admin_bp.route('/holidays')
+@admin_bp.route('/create_default_holiday_types')
+@login_required
+@admin_required
+def create_default_holiday_types():
+    """Create default holiday types for different countries"""
+    try:
+        default_types = [
+            # Public Holiday Types
+            {"name": "Malaysia Public Holiday", "color": "#4CAF50", "is_system": True},
+            {"name": "Singapore Public Holiday", "color": "#4CAF50", "is_system": True},
+            {"name": "Indonesia Public Holiday", "color": "#4CAF50", "is_system": True},
+            {"name": "China Public Holiday", "color": "#4CAF50", "is_system": True},
+            {"name": "Korea Public Holiday", "color": "#4CAF50", "is_system": True},
+            {"name": "Japan Public Holiday", "color": "#4CAF50", "is_system": True},
+
+            # School Holiday Types
+            {"name": "Malaysia School Holiday", "color": "#2196F3", "is_system": True},
+            {"name": "Singapore School Holiday", "color": "#2196F3", "is_system": True},
+            {"name": "Indonesia School Holiday", "color": "#2196F3", "is_system": True},
+            {"name": "China School Holiday", "color": "#2196F3", "is_system": True},
+            {"name": "Korea School Holiday", "color": "#2196F3", "is_system": True},
+            {"name": "Japan School Holiday", "color": "#2196F3", "is_system": True},
+
+            # Custom
+            {"name": "Custom Holiday", "color": "#9C27B0", "is_system": True}
+        ]
+
+        created_count = 0
+
+        for type_data in default_types:
+            existing_type = HolidayType.query.filter_by(name=type_data["name"]).first()
+            if not existing_type:
+                holiday_type = HolidayType(
+                    name=type_data["name"],
+                    color=type_data["color"],
+                    is_system=type_data["is_system"]
+                )
+                db.session.add(holiday_type)
+                created_count += 1
+
+        if created_count > 0:
+            db.session.commit()
+            flash(f'{created_count} default holiday types created successfully', 'success')
+        else:
+            flash('All default holiday types already exist', 'info')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error creating holiday types: {str(e)}', 'danger')
+        print(f"Error creating default holiday types: {e}")
+
+    return redirect(url_for('admin.admin_holidays'))
+
+
+@admin_bp.route('/system_holidays')
+@login_required
+@admin_required
+def system_holidays():
+    # Based on your Image 2, get specific holiday types by their IDs
+    # We know these exist: IDs 1,2,4,5,6,7,8,9,10...
+
+    # Get holiday types that are Public or School holidays
+    # Use specific names we can see from your admin_holidays page
+    holiday_type_names = [
+        'Malaysia Public Holiday',
+        'Singapore Public Holiday',
+        'Indonesia Public Holiday',
+        'China Public Holiday',
+        'Korea Public Holiday',
+        'Japan Public Holiday',
+        'Malaysia School Holiday',
+        'Singapore School Holiday',
+        'Indonesia School Holiday',
+        'China School Holiday',
+        'Korea School Holiday',
+        'Japan School Holiday'
+    ]
+
+    holiday_types = HolidayType.query.filter(
+        HolidayType.name.in_(holiday_type_names)
+    ).order_by(HolidayType.name).all()
+
+    # Debug print
+    print(f"Found {len(holiday_types)} holiday types:")
+    for ht in holiday_types:
+        print(f"  - ID {ht.id}: {ht.name}")
+
+    # Get all system holidays (company_id is None)
+    public_holidays = Holiday.query.join(HolidayType).filter(
+        Holiday.company_id.is_(None),
+        HolidayType.name.contains('Public Holiday')
+    ).order_by(Holiday.date).all()
+
+    school_holidays = Holiday.query.join(HolidayType).filter(
+        Holiday.company_id.is_(None),
+        HolidayType.name.contains('School Holiday')
+    ).order_by(Holiday.date).all()
+
+    return render_template('admin/system_holidays.html',
+                           holiday_types=holiday_types,
+                           public_holidays=public_holidays,
+                           school_holidays=school_holidays)
+
+
+@admin_bp.route('/add_system_holiday', methods=['POST'])
+@login_required
+@admin_required
+def add_system_holiday():
+    """Add a new system-wide holiday - ALLOWS MULTIPLE HOLIDAYS PER DATE/TYPE"""
+    try:
+        holiday_type_id = request.form.get('holiday_type_id')
+        date_str = request.form.get('date')
+        name = request.form.get('name')
+        states = request.form.get('states', '').strip()
+        is_recurring = 'is_recurring' in request.form
+
+        # Validate required fields
+        if not all([holiday_type_id, date_str, name]):
+            flash('All required fields must be filled', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        # Parse date
+        try:
+            holiday_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Invalid date format', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        # REMOVED: Check for existing holiday - now allows multiple holidays per date/type
+        # This allows multiple holidays for the same country/type/date
+
+        # Create new system holiday
+        new_holiday = Holiday(
+            name=name,
+            date=holiday_date,
+            holiday_type_id=holiday_type_id,
+            company_id=None,  # System holiday
+            is_recurring=is_recurring,
+            is_deleted=False,
+            day_of_week=holiday_date.strftime('%A'),
+            states=states if states else None,
+            is_active=True
+        )
+
+        db.session.add(new_holiday)
+        db.session.commit()
+
+        flash(f'System holiday "{name}" added successfully!', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding holiday: {str(e)}', 'danger')
+        print(f"Error adding system holiday: {e}")
+
+    return redirect(url_for('admin.admin_holidays'))
+
+
+@admin_bp.route('/import_holidays', methods=['POST'])
+@login_required
+@admin_required
+def import_holidays():
+    """Import holidays from CSV file - FIXED VERSION - ALLOWS DUPLICATES"""
+    try:
+        # Check if file was uploaded
+        if 'csv_file' not in request.files:
+            flash('No file uploaded', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        file = request.files['csv_file']
+
+        if file.filename == '':
+            flash('No file selected', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        if not file.filename.lower().endswith('.csv'):
+            flash('Please upload a CSV file', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        # Get holiday type from form
+        holiday_type_id = request.form.get('holiday_type_id')
+
+        if not holiday_type_id:
+            flash('Please select a holiday type for the import', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        # Validate holiday type exists
+        holiday_type = HolidayType.query.get(holiday_type_id)
+        if not holiday_type:
+            flash('Invalid holiday type selected', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        # Read and parse CSV
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_reader = csv.DictReader(stream)
+
+        # Expected columns
+        required_columns = ['Date', 'Name']
+        optional_columns = ['Day', 'States', 'Recurring']
+
+        # Check if required columns exist
+        if not all(col in csv_reader.fieldnames for col in required_columns):
+            flash(f'CSV must contain columns: {", ".join(required_columns)}', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        holidays_added = 0
+        holidays_skipped = 0
+        errors = []
+
+        for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header
+            try:
+                # Parse required fields
+                date_str = row['Date'].strip()
+                name = row['Name'].strip()
+
+                if not date_str or not name:
+                    errors.append(f"Row {row_num}: Missing required data")
+                    continue
+
+                # Parse date (try multiple formats)
+                holiday_date = None
+                date_formats = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d']
+
+                for date_format in date_formats:
+                    try:
+                        holiday_date = datetime.strptime(date_str, date_format).date()
+                        break
+                    except ValueError:
+                        continue
+
+                if not holiday_date:
+                    errors.append(f"Row {row_num}: Invalid date format '{date_str}'")
+                    continue
+
+                # Parse optional fields
+                states = row.get('States', '').strip()
+                recurring_str = row.get('Recurring', 'false').strip().lower()
+                is_recurring = recurring_str in ['true', '1', 'yes', 'y']
+
+                # REMOVED: Check if holiday already exists - now allows duplicates
+                # The old code was:
+                # existing_holiday = Holiday.query.filter_by(
+                #     date=holiday_date,
+                #     holiday_type_id=holiday_type_id,
+                #     company_id=None  # System holiday
+                # ).first()
+                #
+                # if existing_holiday:
+                #     holidays_skipped += 1
+                #     continue
+
+                # Create new holiday (always, even if one exists)
+                new_holiday = Holiday(
+                    name=name,
+                    date=holiday_date,
+                    holiday_type_id=holiday_type_id,
+                    company_id=None,  # System holiday
+                    is_recurring=is_recurring,
+                    is_deleted=False,
+                    day_of_week=holiday_date.strftime('%A'),
+                    states=states if states else None,
+                    is_active=True
+                )
+
+                db.session.add(new_holiday)
+                holidays_added += 1
+
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+                continue
+
+        # Commit all changes
+        if holidays_added > 0:
+            db.session.commit()
+
+        # Create success message
+        message_parts = []
+        if holidays_added > 0:
+            message_parts.append(f"{holidays_added} holiday(s) imported")
+        if holidays_skipped > 0:
+            message_parts.append(f"{holidays_skipped} holiday(s) skipped (already exist)")
+        if errors:
+            message_parts.append(f"{len(errors)} error(s)")
+
+        if holidays_added > 0:
+            flash(f"Import completed: {', '.join(message_parts)}", 'success')
+        elif errors:
+            flash(f"Import failed: {', '.join(message_parts)}", 'warning')
+        else:
+            flash("No holidays were imported", 'info')
+
+        # Show first few errors if any
+        if errors:
+            for error in errors[:5]:  # Show first 5 errors
+                flash(error, 'danger')
+            if len(errors) > 5:
+                flash(f"... and {len(errors) - 5} more errors", 'danger')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error importing holidays: {str(e)}', 'danger')
+        print(f"Error importing holidays: {e}")
+        import traceback
+        traceback.print_exc()
+
+    return redirect(url_for('admin.admin_holidays'))
+
+
+@admin_bp.route('/delete_system_holiday/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_system_holiday(id):
+    """Delete a system holiday - FIXED VERSION"""
+    try:
+        holiday = Holiday.query.get_or_404(id)
+
+        # Ensure this is a system holiday (not company-specific)
+        if holiday.company_id is not None:
+            flash('This is not a system holiday and cannot be deleted here', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
+
+        # FIXED: Delete all related company holiday overrides first
+        CompanyHolidayOverride.query.filter_by(holiday_id=holiday.id).delete()
+
+        # Then delete the holiday itself
+        db.session.delete(holiday)
+        db.session.commit()
+
+        flash(f'System holiday "{holiday.name}" deleted successfully', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting holiday: {str(e)}', 'danger')
+        print(f"Error deleting system holiday {id}: {e}")
+        import traceback
+        traceback.print_exc()
+
+    return redirect(url_for('admin.admin_holidays'))
+
+
+@admin_bp.route('/system_holidays')
 @login_required
 @admin_required
 def admin_holidays():
+    """Manage system-wide holidays - FIXED VERSION"""
+    # Get all holiday types
     holiday_types = HolidayType.query.all()
-    holidays = Holiday.query.all()
-    return render_template('admin/holidays.html', holiday_types=holiday_types, holidays=holidays)
+
+    # Get system holidays (no company_id) grouped by type
+    public_holiday_types = HolidayType.query.filter(
+        HolidayType.name.contains('Public Holiday')
+    ).all()
+
+    school_holiday_types = HolidayType.query.filter(
+        HolidayType.name.contains('School Holiday')
+    ).all()
+
+    public_type_ids = [ht.id for ht in public_holiday_types]
+    school_type_ids = [ht.id for ht in school_holiday_types]
+
+    public_holidays = Holiday.query.filter(
+        Holiday.company_id.is_(None),  # System holidays only
+        Holiday.holiday_type_id.in_(public_type_ids)
+    ).order_by(Holiday.date).all()
+
+    school_holidays = Holiday.query.filter(
+        Holiday.company_id.is_(None),  # System holidays only
+        Holiday.holiday_type_id.in_(school_type_ids)
+    ).order_by(Holiday.date).all()
+
+    return render_template('admin/system_holidays.html',
+                           holiday_types=holiday_types,
+                           public_holidays=public_holidays,
+                           school_holidays=school_holidays)
 
 
 @admin_bp.route('/add_holiday_type', methods=['GET', 'POST'])
@@ -693,88 +1067,68 @@ def delete_holiday(id):
     return redirect(url_for('admin.admin_holidays'))
 
 
-
-@admin_bp.route('/system_holidays')
+@admin_bp.route('/bulk_delete_holidays', methods=['POST'])
 @login_required
 @admin_required
-def system_holidays():
-    # Get all holiday types
-    holiday_types = HolidayType.query.all()
+def bulk_delete_holidays():
+    """Bulk delete system holidays - FIXED VERSION"""
+    try:
+        # Get holiday IDs from form data
+        holiday_ids = request.form.getlist('holiday_ids')
 
-    # Get system-wide holidays (where company_id is None)
-    public_holidays = Holiday.query.filter_by(
-        holiday_type_id=HolidayType.query.filter_by(name="Malaysia Public Holiday").first().id,
-        company_id=None
-    ).order_by(Holiday.date).all()
+        if not holiday_ids:
+            flash('No holidays selected for deletion', 'warning')
+            return redirect(url_for('admin.admin_holidays'))
 
-    school_holidays = Holiday.query.filter_by(
-        holiday_type_id=HolidayType.query.filter_by(name="Malaysia School Holiday").first().id,
-        company_id=None
-    ).order_by(Holiday.date).all()
+        # Convert to integers and validate
+        try:
+            holiday_ids = [int(id) for id in holiday_ids]
+        except ValueError:
+            flash('Invalid holiday IDs provided', 'danger')
+            return redirect(url_for('admin.admin_holidays'))
 
-    return render_template('admin/system_holidays.html',
-                           holiday_types=holiday_types,
-                           public_holidays=public_holidays,
-                           school_holidays=school_holidays)
+        # Get the holidays to be deleted
+        holidays_to_delete = Holiday.query.filter(
+            Holiday.id.in_(holiday_ids),
+            Holiday.company_id.is_(None)  # Only allow deletion of system holidays
+        ).all()
 
+        if not holidays_to_delete:
+            flash('No valid system holidays found for deletion', 'warning')
+            return redirect(url_for('admin.admin_holidays'))
 
-@admin_bp.route('/add_system_holiday', methods=['POST'])
-@login_required
-@admin_required
-def add_system_holiday():
-    name = request.form['name']
-    date_str = request.form['date']
-    holiday_type_id = request.form['holiday_type_id']
-    is_recurring = 'is_recurring' in request.form
+        deleted_count = 0
 
-    # Convert date string to date object
-    holiday_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        # Delete holidays and their related overrides
+        for holiday in holidays_to_delete:
+            try:
+                # FIXED: Delete all related company holiday overrides first
+                CompanyHolidayOverride.query.filter_by(holiday_id=holiday.id).delete()
 
-    # Check if holiday already exists
-    existing_holiday = Holiday.query.filter_by(
-        date=holiday_date,
-        holiday_type_id=holiday_type_id,
-        company_id=None
-    ).first()
+                # Then delete the holiday itself
+                db.session.delete(holiday)
+                deleted_count += 1
 
-    if existing_holiday:
-        flash('Holiday already exists for this date and type', 'danger')
-    else:
-        # Create system-wide holiday
-        new_holiday = Holiday(
-            name=name,
-            date=holiday_date,
-            holiday_type_id=holiday_type_id,
-            company_id=None,  # System-wide holiday
-            is_recurring=is_recurring,
-            is_deleted=False
-        )
+            except Exception as e:
+                print(f"Error deleting holiday {holiday.id}: {e}")
+                continue
 
-        db.session.add(new_holiday)
+        # Commit all changes
         db.session.commit()
 
-        flash('System-wide holiday added successfully', 'success')
+        if deleted_count > 0:
+            flash(f'Successfully deleted {deleted_count} system holiday(s)', 'success')
+        else:
+            flash('No holidays were deleted', 'warning')
 
-    return redirect(url_for('admin.system_holidays'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error during bulk delete: {str(e)}', 'danger')
+        print(f"Error in bulk delete holidays: {e}")
+        import traceback
+        traceback.print_exc()
 
-
-@admin_bp.route('/delete_system_holiday/<int:id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_system_holiday(id):
-    holiday = Holiday.query.get_or_404(id)
-
-    # Ensure this is a system-wide holiday
-    if holiday.company_id is not None:
-        flash('This is not a system-wide holiday', 'danger')
-        return redirect(url_for('admin.system_holidays'))
-
-    # Delete the holiday
-    db.session.delete(holiday)
-    db.session.commit()
-
-    flash('System-wide holiday deleted successfully', 'success')
-    return redirect(url_for('admin.system_holidays'))
+    return redirect(url_for('admin.admin_holidays'))
 
 
 @admin_bp.route('/data_management')

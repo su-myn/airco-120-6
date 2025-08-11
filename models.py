@@ -599,10 +599,46 @@ class Holiday(db.Model):
     is_recurring = db.Column(db.Boolean, default=False)  # For annual holidays
     is_deleted = db.Column(db.Boolean, default=False)  # For marking system holidays as deleted for a company
 
+    # NEW FIELDS
+    day_of_week = db.Column(db.String(20), nullable=True)  # Monday, Tuesday, etc.
+    states = db.Column(db.String(200), nullable=True)  # For specific states/regions
+    is_active = db.Column(db.Boolean, default=True)  # Whether this holiday is active
+
     # Relationships
     holiday_type = db.relationship('HolidayType', backref='holidays')
     company = db.relationship('Company', backref='holidays')
 
+
+# Add a new model for Company Holiday Preferences
+class CompanyHolidayPreference(db.Model):
+    """Track which country holidays each company has enabled"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    holiday_type_id = db.Column(db.Integer, db.ForeignKey('holiday_type.id'), nullable=False)
+    is_enabled = db.Column(db.Boolean, default=False)
+
+    # Relationships
+    company = db.relationship('Company', backref='holiday_preferences')
+    holiday_type = db.relationship('HolidayType', backref='company_preferences')
+
+    # Ensure one record per company per holiday type
+    __table_args__ = (db.UniqueConstraint('company_id', 'holiday_type_id', name='_company_holiday_type_uc'),)
+
+
+# Add a new model for Company Holiday Overrides (individual date toggles)
+class CompanyHolidayOverride(db.Model):
+    """Track individual holiday date toggles for each company"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    holiday_id = db.Column(db.Integer, db.ForeignKey('holiday.id'), nullable=False)
+    is_enabled = db.Column(db.Boolean, default=True)  # Whether this specific holiday is enabled for this company
+
+    # Relationships
+    company = db.relationship('Company', backref='holiday_overrides')
+    holiday = db.relationship('Holiday', backref='company_overrides')
+
+    # Ensure one record per company per holiday
+    __table_args__ = (db.UniqueConstraint('company_id', 'holiday_id', name='_company_holiday_override_uc'),)
 
 # Add this new model to your models.py
 class BookingCalendarSource(db.Model):

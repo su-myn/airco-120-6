@@ -53,28 +53,21 @@
     .calendar-table {
         width: 100%;
         border-collapse: collapse;
+        table-layout: fixed;    /* Add this to force equal column widths */
     }
 
-    .calendar-table th {
-        background-color: #f5f5f5;
-        color: #333;
-        padding: 10px;
-        text-align: center;
-        font-weight: bold;
-        border: 1px solid #ddd;
-    }
-
+    .calendar-table th,
     .calendar-table td {
-        border: 1px solid #ddd;
-        padding: 0;
-        height: 120px;
-        vertical-align: top;
+        width: 14.28%;          /* 100% / 7 days = equal width */
+        word-wrap: break-word;  /* Allow text wrapping */
     }
 
     .calendar-day {
         position: relative;
-        height: 100%;
         min-height: 120px;
+        display: flex;           /* Add flex */
+        flex-direction: column;  /* Add flex direction */
+        padding-bottom: 5px;
     }
 
     .day-empty {
@@ -91,13 +84,14 @@
     }
 
     .occupancy-info {
-        position: absolute;
+        position: absolute;      /* Keep absolute for centering */
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         font-size: 1.8rem;
         font-weight: bold;
-        color: #2196F3; /* Changed to blue */
+        color: #2196F3;
+        z-index: 1;              /* Add z-index to stay on top */
     }
 
     .occupancy-info.high {
@@ -113,13 +107,12 @@
     }
 
     .holiday-container {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
+        position: relative;  /* Change from absolute to relative */
+        margin-top: auto;    /* Push to bottom */
         display: flex;
         flex-direction: column;
         gap: 2px;
+        flex-shrink: 0;      /* Prevent shrinking */
     }
 
     .holiday-banner {
@@ -129,6 +122,8 @@
         overflow: hidden;
         text-overflow: ellipsis;
         color: white;
+        max-width: 100%;        /* Add this */
+        box-sizing: border-box; /* Add this */
     }
 
     .holiday-public {
@@ -364,6 +359,8 @@
         fetch(`/api/occupancy/${year}/${month}`)
             .then(response => response.json())
             .then(data => {
+                console.log('Occupancy data received:', data);
+
                 // Update occupancy information
                 for (const [day, count] of Object.entries(data.occupancy)) {
                     const occupancyElement = document.getElementById(`occupancy-${day}`);
@@ -401,19 +398,25 @@
                     }
                 }
 
-                // Update holidays
-                for (const [day, holidays] of Object.entries(data.holidays)) {
-                    const holidayContainer = document.getElementById(`holidays-${day}`);
-                    if (holidayContainer) {
-                        holidayContainer.innerHTML = '';
-                        holidays.forEach(holiday => {
-                            const holidayElement = document.createElement('div');
-                            holidayElement.className = `holiday-banner holiday-${holiday.type}`;
-                            holidayElement.textContent = holiday.name;
-                            holidayElement.title = holiday.name;
-                            holidayContainer.appendChild(holidayElement);
-                        });
+                // FIXED: Update holidays - check if holidays data exists
+                if (data.holidays && typeof data.holidays === 'object') {
+                    console.log('Holiday data:', data.holidays);
+
+                    for (const [day, holidayList] of Object.entries(data.holidays)) {
+                        const holidayContainer = document.getElementById(`holidays-${day}`);
+                        if (holidayContainer && Array.isArray(holidayList)) {
+                            holidayContainer.innerHTML = '';
+                            holidayList.forEach(holiday => {
+                                const holidayElement = document.createElement('div');
+                                holidayElement.className = `holiday-banner holiday-${holiday.type}`;
+                                holidayElement.textContent = truncateText(holiday.name, 32);
+                                holidayElement.title = holiday.name; // Keep full name in tooltip
+                                holidayContainer.appendChild(holidayElement);
+                            });
+                        }
                     }
+                } else {
+                    console.log('No holiday data received or invalid format');
                 }
 
                 // Hide loading indicator, show calendar
@@ -425,6 +428,12 @@
                 loadingIndicator.style.display = 'none';
                 alert('Error loading occupancy data. Please try again.');
             });
+    }
+
+    // Add this function to truncate long holiday names
+    function truncateText(text, maxLength = 15) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
     }
 </script>
 {% endblock %}
