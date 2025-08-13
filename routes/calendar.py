@@ -525,18 +525,21 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
         affected_units.add(unit.unit_number)
 
     # CRITICAL FIX: Handle cancelled bookings more carefully - DON'T CANCEL PAST BOOKINGS
+    # Get today's date in Malaysia timezone (define once for the loop)
+    today_malaysia = datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date()
+
     for booking in all_existing_bookings:
         if not booking.confirmation_code:
             continue
 
-        # If this booking's confirmation code is not in current ICS
-        if booking.confirmation_code not in current_codes:
-            # CRITICAL FIX: Never cancel bookings that have already checked out (past bookings)
-            # Past bookings are historical data and should be preserved even if no longer in ICS
-            if booking.check_out_date < datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date():
-                print(f"DEBUG: Skipping cancellation of past booking {booking.confirmation_code} - already checked out on {booking.check_out_date}")
-                continue
+        # CRITICAL FIX: Never cancel bookings that have already checked out (past bookings)
+        # Past bookings are historical data and should be preserved even if no longer in ICS
+        if booking.check_out_date < today_malaysia:
+            print(f"DEBUG: Skipping cancellation of past booking {booking.confirmation_code} - already checked out on {booking.check_out_date}")
+            continue
 
+        # If this booking's confirmation code is not in current ICS (and it's a future booking)
+        if booking.confirmation_code not in current_codes:
             # Only cancel if this booking was imported by THIS specific source
             should_cancel = False
 
@@ -554,8 +557,8 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
 
                 should_cancel = (other_sources <= 1)
 
-            # Additional check: Only cancel future bookings (double-check)
-            if should_cancel and booking.check_out_date >= datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date() and not booking.is_cancelled:
+            # Additional check: Only cancel future bookings (double-check) and not already cancelled
+            if should_cancel and booking.check_out_date >= today_malaysia and not booking.is_cancelled:
                 print(f"DEBUG: Marking future booking {booking.confirmation_code} as cancelled")
                 booking.is_cancelled = True
 
@@ -772,12 +775,15 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
         affected_units.add(unit.unit_number)
 
     # CRITICAL FIX: Handle cancelled bookings more carefully - DON'T CANCEL PAST BOOKINGS
+    # Get today's date in Malaysia timezone (define once for the loop)
+    today_malaysia = datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date()
+
     for confirmation_code in existing_codes - current_codes:
         booking = existing_booking_map[confirmation_code]
 
         # CRITICAL FIX: Never cancel bookings that have already checked out (past bookings)
         # Past bookings are historical data and should be preserved even if no longer in ICS
-        if booking.check_out_date < datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date():
+        if booking.check_out_date < today_malaysia:
             print(f"DEBUG: Skipping cancellation of past booking {confirmation_code} - already checked out on {booking.check_out_date}")
             continue
 
@@ -800,8 +806,8 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
 
             should_cancel = (other_sources == 0)
 
-        # Additional check: Only cancel future bookings (double-check)
-        if should_cancel and booking.check_out_date >= datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date():
+        # Additional check: Only cancel future bookings (double-check) and not already cancelled
+        if should_cancel and booking.check_out_date >= today_malaysia and not booking.is_cancelled:
             print(f"DEBUG: Marking future booking {confirmation_code} as cancelled")
             booking.is_cancelled = True
 
