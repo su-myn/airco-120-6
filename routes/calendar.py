@@ -351,31 +351,32 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
             if isinstance(end_date, datetime):
                 end_date = end_date.date()
 
-            # FILTER: Skip bookings with check-out date in the past (before today)
-            if end_date < today:
-                print(f"DEBUG: Skipping past booking {confirmation_code} with check-out date {end_date}")
-                continue
-
             # Calculate number of nights
             nights = (end_date - start_date).days
 
             # Extract guest name from summary or description
             guest_name = extract_guest_name(summary, description)
 
-            # Store booking details
+            # Store booking details - include ALL bookings (past and future) for comparison
             current_bookings[confirmation_code] = {
                 'check_in_date': start_date,
                 'check_out_date': end_date,
                 'number_of_nights': nights,
                 'guest_name': guest_name,
                 'description': description,
-                'source_identifier': source_identifier
+                'source_identifier': source_identifier,
+                'is_past': is_past_booking  # Track if this is a past booking
             }
 
-    print(f"DEBUG: Found {len(current_bookings)} valid future bookings in ICS with confirmation codes: {list(current_bookings.keys())}")
+    print(f"DEBUG: Found {len(current_bookings)} total bookings in ICS (including past ones)")
+
+    # Filter current bookings to only future ones for processing
+    future_bookings = {k: v for k, v in current_bookings.items() if not v['is_past']}
+    print(
+        f"DEBUG: Found {len(future_bookings)} future bookings in ICS with confirmation codes: {list(future_bookings.keys())}")
 
     # FIXED: Get existing bookings more intelligently - focus on confirmation codes
-    current_codes = set(current_bookings.keys())
+    current_codes = set(future_bookings.keys())  # Only use future booking codes
 
     if not current_codes:
         print("DEBUG: No valid future confirmation codes found in ICS, exiting")
@@ -398,21 +399,23 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
 
     existing_bookings_with_codes = existing_bookings_query.all()
 
-    # ADDITIONAL: Get ALL existing bookings for this unit/source to handle cancellations
-    all_existing_bookings = BookingForm.query.filter(
+    # CRITICAL FIX: Get ALL existing bookings for this unit/source to handle cancellations
+    # BUT ONLY for FUTURE bookings (check-out date >= today)
+    all_existing_future_bookings = BookingForm.query.filter(
         BookingForm.unit_id == unit_id,
-        BookingForm.booking_source == source
+        BookingForm.booking_source == source,
+        BookingForm.check_out_date >= today  # ONLY future bookings
     )
 
     if source_identifier:
-        all_existing_bookings = all_existing_bookings.filter(
+        all_existing_future_bookings = all_existing_future_bookings.filter(
             db.or_(
                 BookingForm.import_source == source_identifier,
                 BookingForm.import_source.is_(None)
             )
         )
 
-    all_existing_bookings = all_existing_bookings.all()
+    all_existing_future_bookings = all_existing_future_bookings.all()
 
     # Create maps for easier lookup
     existing_codes = set()
@@ -424,12 +427,13 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
             existing_codes.add(booking.confirmation_code)
             existing_booking_map[booking.confirmation_code] = booking
 
-    print(f"DEBUG: Found {len(existing_codes)} existing bookings with confirmation codes: {list(existing_codes)}")
+    print(
+        f"DEBUG: Found {len(existing_codes)} existing future bookings with confirmation codes: {list(existing_codes)}")
 
     # FIXED: Process updates for existing bookings (by confirmation code)
     for confirmation_code in existing_codes.intersection(current_codes):
         booking = existing_booking_map[confirmation_code]
-        current_data = current_bookings[confirmation_code]
+        current_data = future_bookings[confirmation_code]
 
         needs_update = (
                 booking.check_in_date != current_data['check_in_date'] or
@@ -460,7 +464,7 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
 
     # FIXED: Add new bookings (check for duplicates more thoroughly)
     for confirmation_code in current_codes - existing_codes:
-        details = current_bookings[confirmation_code]
+        details = future_bookings[confirmation_code]
 
         # ADDITIONAL CHECK: Before creating, check if a booking with this confirmation code
         # already exists anywhere in the system (to prevent duplicates across different syncs)
@@ -470,7 +474,8 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
         ).first()
 
         if duplicate_check:
-            print(f"DEBUG: Skipping duplicate booking {confirmation_code} - already exists with ID {duplicate_check.id}")
+            print(
+                f"DEBUG: Skipping duplicate booking {confirmation_code} - already exists with ID {duplicate_check.id}")
             continue
 
         print(f"DEBUG: Adding new booking {confirmation_code}")
@@ -524,22 +529,28 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
         affected_booking_ids.append(new_booking.id)
         affected_units.add(unit.unit_number)
 
-    # CRITICAL FIX: Handle cancelled bookings more carefully - DON'T CANCEL PAST BOOKINGS
+    # CRITICAL FIX: Handle cancelled bookings more carefully - ONLY for FUTURE bookings
     # Get today's date in Malaysia timezone (define once for the loop)
     today_malaysia = datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date()
 
-    for booking in all_existing_bookings:
+    for booking in all_existing_future_bookings:
         if not booking.confirmation_code:
             continue
 
-        # CRITICAL FIX: Never cancel bookings that have already checked out (past bookings)
-        # Past bookings are historical data and should be preserved even if no longer in ICS
+        # CRITICAL CHECK: Only process future bookings for cancellation
         if booking.check_out_date < today_malaysia:
-            print(f"DEBUG: Skipping cancellation of past booking {booking.confirmation_code} - already checked out on {booking.check_out_date}")
+            print(
+                f"DEBUG: Skipping past booking {booking.confirmation_code} - already checked out on {booking.check_out_date}")
             continue
 
-        # If this booking's confirmation code is not in current ICS (and it's a future booking)
+        # If this booking's confirmation code is not in current future ICS bookings
         if booking.confirmation_code not in current_codes:
+            # ADDITIONAL CHECK: See if this booking exists in the full current_bookings (including past)
+            # If it exists as a past booking in the ICS, don't cancel it
+            if booking.confirmation_code in current_bookings:
+                print(f"DEBUG: Booking {booking.confirmation_code} exists as past booking in ICS - not cancelling")
+                continue
+
             # Only cancel if this booking was imported by THIS specific source
             should_cancel = False
 
@@ -557,7 +568,7 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
 
                 should_cancel = (other_sources <= 1)
 
-            # Additional check: Only cancel future bookings (double-check) and not already cancelled
+            # Additional check: Only cancel future bookings and not already cancelled
             if should_cancel and booking.check_out_date >= today_malaysia and not booking.is_cancelled:
                 print(f"DEBUG: Marking future booking {booking.confirmation_code} as cancelled")
                 booking.is_cancelled = True
@@ -580,7 +591,8 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
     if bookings_added > 0 or bookings_updated > 0 or bookings_cancelled > 0:
         try:
             db.session.commit()
-            print(f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
+            print(
+                f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
         except Exception as e:
             print(f"ERROR: Failed to commit changes: {str(e)}")
             db.session.rollback()
@@ -660,42 +672,47 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
             if isinstance(end_date, datetime):
                 end_date = end_date.date()
 
-            # FILTER: Skip bookings with check-out date in the past (before today)
-            if end_date < today:
-                print(f"DEBUG: Skipping past booking {confirmation_code} with check-out date {end_date}")
-                continue
-
             # Calculate number of nights
             nights = (end_date - start_date).days
 
             # Extract guest name from summary or description
             guest_name = extract_guest_name(summary, description)
 
-            # Store booking details
+            # Store booking details (including past bookings for comparison)
             current_bookings[confirmation_code] = {
                 'check_in_date': start_date,
                 'check_out_date': end_date,
                 'number_of_nights': nights,
                 'guest_name': guest_name,
                 'description': description,
-                'source_identifier': source_identifier
+                'source_identifier': source_identifier,
+                'is_past': end_date < today  # Mark if this is a past booking
             }
 
-    # Get existing bookings for this source
+    # Separate future and past bookings
+    future_bookings = {k: v for k, v in current_bookings.items() if not v.get('is_past', False)}
+    past_bookings = {k: v for k, v in current_bookings.items() if v.get('is_past', False)}
+
+    print(f"DEBUG: Found {len(current_bookings)} total bookings in ICS")
+    print(f"DEBUG: {len(future_bookings)} future bookings, {len(past_bookings)} past bookings")
+
+    # Get existing bookings for this source - ONLY future bookings
     if source_identifier:
         existing_bookings = BookingForm.query.filter(
             BookingForm.unit_id == unit_id,
             BookingForm.booking_source == source,
-            BookingForm.import_source == source_identifier
+            BookingForm.import_source == source_identifier,
+            BookingForm.check_out_date >= today  # ONLY future bookings
         ).all()
     else:
         existing_bookings = BookingForm.query.filter(
             BookingForm.unit_id == unit_id,
-            BookingForm.booking_source == source
+            BookingForm.booking_source == source,
+            BookingForm.check_out_date >= today  # ONLY future bookings
         ).all()
 
     # Create sets for easier comparison
-    current_codes = set(current_bookings.keys())
+    current_codes = set(future_bookings.keys())
     existing_codes = set()
     existing_booking_map = {}
 
@@ -705,13 +722,13 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
             existing_codes.add(booking.confirmation_code)
             existing_booking_map[booking.confirmation_code] = booking
 
-    print(f"DEBUG: Found {len(current_codes)} bookings in ICS")
-    print(f"DEBUG: Found {len(existing_codes)} existing bookings in database")
+    print(f"DEBUG: Found {len(current_codes)} future bookings in ICS")
+    print(f"DEBUG: Found {len(existing_codes)} existing future bookings in database")
 
     # Process updates for existing bookings
     for confirmation_code in existing_codes.intersection(current_codes):
         booking = existing_booking_map[confirmation_code]
-        current_data = current_bookings[confirmation_code]
+        current_data = future_bookings[confirmation_code]
 
         needs_update = (
                 booking.check_in_date != current_data['check_in_date'] or
@@ -742,7 +759,7 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
 
     # Add new bookings
     for confirmation_code in current_codes - existing_codes:
-        details = current_bookings[confirmation_code]
+        details = future_bookings[confirmation_code]
 
         print(f"DEBUG: Adding new booking {confirmation_code}")
 
@@ -774,17 +791,29 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
         affected_booking_ids.append(new_booking.id)
         affected_units.add(unit.unit_number)
 
-    # CRITICAL FIX: Handle cancelled bookings more carefully - DON'T CANCEL PAST BOOKINGS
+    # CRITICAL FIX: Handle cancelled bookings more carefully - ONLY for FUTURE bookings
     # Get today's date in Malaysia timezone (define once for the loop)
     today_malaysia = datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).date()
 
     for confirmation_code in existing_codes - current_codes:
         booking = existing_booking_map[confirmation_code]
 
-        # CRITICAL FIX: Never cancel bookings that have already checked out (past bookings)
-        # Past bookings are historical data and should be preserved even if no longer in ICS
+        # CRITICAL CHECK: Only process future bookings for cancellation
         if booking.check_out_date < today_malaysia:
-            print(f"DEBUG: Skipping cancellation of past booking {confirmation_code} - already checked out on {booking.check_out_date}")
+            print(f"DEBUG: Skipping past booking {confirmation_code} - already checked out on {booking.check_out_date}")
+            continue
+
+        # CRITICAL CHECK: See if this booking exists in past bookings from ICS
+        # If it exists as a past booking in the ICS, don't cancel it - it's just completed
+        if booking.confirmation_code in past_bookings:
+            print(
+                f"DEBUG: Booking {booking.confirmation_code} exists as past booking in ICS - not cancelling (checkout: {booking.check_out_date})")
+            continue
+
+        # ADDITIONAL CHECK: If this is actually a past booking in our database, don't cancel it
+        if booking.check_out_date < today_malaysia:
+            print(
+                f"DEBUG: Booking {booking.confirmation_code} is past booking in database - not cancelling (checkout: {booking.check_out_date})")
             continue
 
         # Only cancel if this booking was imported from this specific source
@@ -806,9 +835,9 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
 
             should_cancel = (other_sources == 0)
 
-        # Additional check: Only cancel future bookings (double-check) and not already cancelled
+        # Additional check: Only cancel future bookings and not already cancelled
         if should_cancel and booking.check_out_date >= today_malaysia and not booking.is_cancelled:
-            print(f"DEBUG: Marking future booking {confirmation_code} as cancelled")
+            print(f"DEBUG: Marking future booking {booking.confirmation_code} as cancelled")
             booking.is_cancelled = True
 
             # Add note about cancellation
@@ -829,7 +858,8 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
     if bookings_added > 0 or bookings_updated > 0 or bookings_cancelled > 0:
         try:
             db.session.commit()
-            print(f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
+            print(
+                f"DEBUG: Successfully committed {bookings_added} new, {bookings_updated} updated, {bookings_cancelled} cancelled bookings")
         except Exception as e:
             print(f"ERROR: Failed to commit changes: {str(e)}")
             db.session.rollback()
