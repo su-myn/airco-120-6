@@ -207,12 +207,13 @@ def get_monthly_revenue():
         end_date = datetime(year, month + 1, 1).date()
 
     # Query bookings for the month, filtered by accessible units
-    # CHANGED: Simple filter by check-in date only (revenue recognition on check-in date)
+    # UPDATED: Exclude bookings with payment_status of "Cancelled"
     bookings = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(accessible_unit_ids),
         BookingForm.check_in_date >= start_date,
-        BookingForm.check_in_date < end_date
+        BookingForm.check_in_date < end_date,
+        BookingForm.payment_status != 'Cancelled'  # EXCLUDE CANCELLED BOOKINGS
     ).all()
 
     # Calculate revenue per accessible unit
@@ -222,7 +223,7 @@ def get_monthly_revenue():
         if unit_id not in revenues:
             revenues[unit_id] = 0
 
-        # CHANGED: Use full booking price (revenue recognition on check-in date)
+        # Use full booking price (revenue recognition on check-in date)
         if booking.price:
             try:
                 booking_price = float(booking.price)
@@ -232,6 +233,7 @@ def get_monthly_revenue():
                 pass
 
     return jsonify({'revenues': revenues})
+
 
 # Replace the existing get_monthly_issue_costs() function with this updated version:
 @expenses_bp.route('/api/issues/monthly_costs')
