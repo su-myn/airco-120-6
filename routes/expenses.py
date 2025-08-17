@@ -207,13 +207,13 @@ def get_monthly_revenue():
         end_date = datetime(year, month + 1, 1).date()
 
     # Query bookings for the month, filtered by accessible units
-    # UPDATED: Exclude bookings with payment_status of "Cancelled"
+    # FIXED: Use is_cancelled field like in bookings.py
     bookings = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(accessible_unit_ids),
         BookingForm.check_in_date >= start_date,
         BookingForm.check_in_date < end_date,
-        BookingForm.payment_status != 'Cancelled'  # EXCLUDE CANCELLED BOOKINGS
+        BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
     ).all()
 
     # Calculate revenue per accessible unit
