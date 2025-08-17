@@ -62,56 +62,63 @@ def dashboard():
             # Total accessible ACTIVE units
             total_units = len(accessible_unit_ids)
 
-            # Current occupancy (check-in <= today < check-out) for accessible active units
+            # Current occupancy (check-in <= today < check-out) for accessible active units - EXCLUDE CANCELLED
             current_occupancy = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
                 BookingForm.check_in_date <= today,
-                BookingForm.check_out_date > today
+                BookingForm.check_out_date > today,
+                BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
             ).count()
 
-            # Tomorrow occupancy for accessible active units
+            # Tomorrow occupancy for accessible active units - EXCLUDE CANCELLED
             tomorrow_occupancy = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
                 BookingForm.check_in_date <= tomorrow,
-                BookingForm.check_out_date > tomorrow
+                BookingForm.check_out_date > tomorrow,
+                BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
             ).count()
 
-            # Revenue today (bookings checking in today) for accessible active units
+            # Revenue today (bookings checking in today) for accessible active units - EXCLUDE CANCELLED
             today_bookings = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
-                BookingForm.check_in_date == today
+                BookingForm.check_in_date == today,
+                BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
             ).all()
             revenue_today = sum(float(booking.price) for booking in today_bookings if booking.price)
 
-            # Revenue tomorrow for accessible active units
+            # Revenue tomorrow for accessible active units - EXCLUDE CANCELLED
             tomorrow_bookings = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
-                BookingForm.check_in_date == tomorrow
+                BookingForm.check_in_date == tomorrow,
+                BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
             ).all()
             revenue_tomorrow = sum(float(booking.price) for booking in tomorrow_bookings if booking.price)
 
-            # Check-ins and check-outs for accessible active units
+            # Check-ins and check-outs for accessible active units - EXCLUDE CANCELLED
             checkins_today = len(today_bookings)
             checkins_tomorrow = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
-                BookingForm.check_in_date == tomorrow
+                BookingForm.check_in_date == tomorrow,
+                BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
             ).count()
 
             checkouts_today = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
-                BookingForm.check_out_date == today
+                BookingForm.check_out_date == today,
+                BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
             ).count()
 
             checkouts_tomorrow = BookingForm.query.filter(
                 BookingForm.company_id == user_company_id,
                 BookingForm.unit_id.in_(accessible_unit_ids),
-                BookingForm.check_out_date == tomorrow
+                BookingForm.check_out_date == tomorrow,
+                BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
             ).count()
 
             booking_stats = {
@@ -138,6 +145,7 @@ def dashboard():
                 'checkouts_today': 0,
                 'checkouts_tomorrow': 0
             }
+
 
     # ============ ISSUE ANALYTICS ============
     issue_stats = {}
@@ -625,11 +633,12 @@ def calculate_daily_earnings_fixed(company_id, start_date, end_date, unit_ids):
 
     print(f"DEBUG: calculate_daily_earnings_fixed - filtering for date: {start_date}")
 
-    # FIXED: Use exact same query as bookings page
+    # FIXED: Use exact same query as bookings page - EXCLUDE CANCELLED BOOKINGS
     bookings_query = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(unit_ids),
-        BookingForm.check_in_date == start_date  # Exact date match like bookings page
+        BookingForm.check_in_date == start_date,  # Exact date match like bookings page
+        BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
     )
 
     bookings = bookings_query.all()
