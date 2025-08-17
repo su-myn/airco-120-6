@@ -419,13 +419,13 @@ def get_earnings_data():
     if not accessible_unit_ids:
         # No accessible units - return zero data
         return jsonify({
-            'revenue': 0,
-            'total_expenses': 0,
-            'net_income': 0,
-            'revenue_change': 0,
-            'expense_change': 0,
-            'income_change': 0,
-            'expense_breakdown': []
+            "revenue": 0,
+            "total_expenses": 0,
+            "net_income": 0,
+            "revenue_change": 0,
+            "expense_change": 0,
+            "income_change": 0,
+            "expense_breakdown": []
         })
 
     # If unit_filter is specified and user has access, use it; otherwise use all accessible units
@@ -474,6 +474,7 @@ def get_earnings_data():
     return jsonify(current_data)
 
 
+# IMPORTANT: Also need to fix the calculate_percentage_change function to handle the order correctly
 def calculate_percentage_change(old_value, new_value):
     """Calculate percentage change between two values"""
     if old_value == 0:
@@ -813,12 +814,13 @@ def calculate_weekly_earnings(company_id, start_date, end_date, unit_ids):
 
     print(f"DEBUG: calculate_weekly_earnings - start_date: {start_date}, end_date: {end_date}")
 
-    # FIXED: For weekly periods, we need to sum up all check-ins within the date range
+    # FIXED: For weekly periods, we need to sum up all check-ins within the date range - EXCLUDE CANCELLED
     bookings_query = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(unit_ids),
         BookingForm.check_in_date >= start_date,
-        BookingForm.check_in_date <= end_date
+        BookingForm.check_in_date <= end_date,
+        BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
     )
 
     bookings = bookings_query.all()
@@ -884,12 +886,13 @@ def calculate_monthly_earnings(company_id, start_date, end_date, unit_ids):
 
     print(f"DEBUG: calculate_monthly_earnings - start_date: {start_date}, end_date: {end_date}")
 
-    # REVENUE: Use actual bookings within the complete month range
+    # REVENUE: Use actual bookings within the complete month range - EXCLUDE CANCELLED BOOKINGS
     bookings_query = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(unit_ids),
         BookingForm.check_in_date >= start_date,
-        BookingForm.check_in_date <= end_date
+        BookingForm.check_in_date <= end_date,
+        BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
     )
 
     bookings = bookings_query.all()
@@ -985,12 +988,13 @@ def calculate_yearly_earnings(company_id, start_date, end_date, unit_ids):
 
     print(f"DEBUG: calculate_yearly_earnings - start_date: {start_date}, end_date: {end_date}")
 
-    # REVENUE: Use actual bookings within the complete year range
+    # REVENUE: Use actual bookings within the complete year range - EXCLUDE CANCELLED BOOKINGS
     bookings_query = BookingForm.query.filter(
         BookingForm.company_id == company_id,
         BookingForm.unit_id.in_(unit_ids),
         BookingForm.check_in_date >= start_date,
-        BookingForm.check_in_date <= end_date
+        BookingForm.check_in_date <= end_date,
+        BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
     )
 
     bookings = bookings_query.all()

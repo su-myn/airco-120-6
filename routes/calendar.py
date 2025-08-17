@@ -43,8 +43,10 @@ def calendar_view():
 @login_required
 @permission_required('can_view_bookings')
 def get_calendar_bookings():
-    # Get accessible bookings for current user
-    bookings = get_accessible_bookings_query().all()
+    # Get accessible bookings for current user - EXCLUDE CANCELLED BOOKINGS
+    bookings = get_accessible_bookings_query().filter(
+        BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
+    ).all()
 
     # Format the data for the calendar
     calendar_data = []

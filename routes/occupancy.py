@@ -72,10 +72,6 @@ def occupancy():
                            today=today)
 
 
-# Update the get_occupancy_data route in occupancy.py
-
-# Update the get_occupancy_data route in occupancy.py
-
 @occupancy_bp.route('/api/occupancy/<int:year>/<int:month>')
 @login_required
 def get_occupancy_data(year, month):
@@ -111,11 +107,11 @@ def get_occupancy_data(year, month):
     else:
         last_day = date(year, month + 1, 1) - timedelta(days=1)
 
-    # Get bookings that overlap with this month for accessible ACTIVE units only
+    # Get bookings that overlap with this month for accessible ACTIVE units only - EXCLUDE CANCELLED
     bookings = BookingForm.query.filter(
         BookingForm.company_id == current_user.company_id,
         BookingForm.unit_id.in_(accessible_active_unit_ids),
-        BookingForm.is_cancelled != True,
+        BookingForm.is_cancelled != True,  # EXCLUDE CANCELLED BOOKINGS
         BookingForm.check_in_date <= last_day,
         BookingForm.check_out_date > first_day
     ).all()
@@ -273,7 +269,6 @@ def get_occupancy_data(year, month):
         "total_units": total_units,
         "holidays": holiday_data
     })
-
 
 @occupancy_bp.route('/add_custom_holiday', methods=['GET', 'POST'])
 @login_required
