@@ -64,17 +64,10 @@ def get_accessible_units_query():
         )
     )
 
-
 def get_accessible_bookings_query():
     """Get bookings query filtered by accessible units"""
     base_query = BookingForm.query.filter_by(company_id=current_user.company_id)
-
-    # EXCLUDE CANCELLED BOOKINGS by default
-    filtered_query = filter_query_by_accessible_units(base_query, BookingForm).filter(
-        BookingForm.is_cancelled != True  # EXCLUDE CANCELLED BOOKINGS
-    )
-
-    return filtered_query
+    return filter_query_by_accessible_units(base_query, BookingForm)
 
 
 def get_accessible_issues_query():
