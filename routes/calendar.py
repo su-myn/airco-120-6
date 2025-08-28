@@ -333,6 +333,13 @@ def process_ics_calendar(calendar_data, unit_id, source, source_identifier=None,
                 if url_match:
                     confirmation_code = url_match.group(1)
 
+            # For Agoda: Use UID since they don't provide confirmation codes in description
+            elif source == "Agoda":
+                uid = str(component.get('uid', ''))
+                if uid and '@agoda.com' in uid:
+                    # Extract the UUID part before @agoda.com
+                    confirmation_code = uid.split('@')[0]
+
             # For other platforms - adapt as needed
             elif source == "Booking.com":
                 booking_match = re.search(r'Booking ID:\s*(\d+)', description)
@@ -668,6 +675,13 @@ def process_ics_calendar_scheduled(calendar_data, unit_id, source, source_identi
                 url_match = re.search(r'reservations/details/([A-Z0-9]+)', description)
                 if url_match:
                     confirmation_code = url_match.group(1)
+
+            # For Agoda: Use UID since they don't provide confirmation codes in description
+            elif source == "Agoda":
+                uid = str(component.get('uid', ''))
+                if uid and '@agoda.com' in uid:
+                    # Extract the UUID part before @agoda.com
+                    confirmation_code = uid.split('@')[0]
 
             # For other platforms - adapt as needed
             elif source == "Booking.com":
